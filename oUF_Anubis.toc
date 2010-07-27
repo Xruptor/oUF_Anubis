@@ -1,0 +1,8 @@
+## Interface: 30300
+## Title: oUF_Anubis
+## Notes: oUF layout based on oUF_zp and oUF_lily
+## Author: Xruptor
+## Version: 1.1
+## RequiredDeps: oUF
+
+core.lua
