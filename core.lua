@@ -3,6 +3,9 @@ local bufftexture = 'Interface\\AddOns\\oUF_Anubis\\texture\\buff'
 local _, PlayerClass = UnitClass("player")
 local petAdjust = 0
 
+--Settings
+local showPortait = true
+
 oUF.colors.power = {
 	["MANA"] = {26/255, 139/255, 255/255 },
 	["RAGE"] = {255/255, 26/255, 48/255 },
@@ -186,6 +189,23 @@ local function layout(self, unit)
 		self.Castbar.Time = self.Castbar:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmallRight')
 		self.Castbar.Time:SetPoint('RIGHT', self.Castbar, -3, 12)
 		self.Castbar.Time:SetTextColor(1, 1, 1)
+		
+		if showPortait then
+			self.Portrait = CreateFrame('PlayerModel', nil, self)
+			self.Portrait:SetWidth(40)
+			self.Portrait:SetHeight(40)
+			if unit == 'target' then
+			  self.Portrait:SetPoint("TOPLEFT", self, "TOPRIGHT", 5, 0)
+			else
+			  self.Portrait:SetPoint("TOPRIGHT", self, "TOPLEFT", -5, 0)
+			end
+			self.Portrait.bg = self.Portrait:CreateTexture(nil, "BORDER")
+			self.Portrait.bg:SetTexture(bartexture)
+			self.Portrait.bg:SetPoint("TOPLEFT", self.Portrait, "TOPLEFT", -1, 1)
+			self.Portrait.bg:SetPoint("BOTTOMRIGHT", self.Portrait, "BOTTOMRIGHT", 1, -1)
+			self.Portrait.bg:SetVertexColor(0,0,0,0.5)
+		end
+		
 	end
 
 	if unit == 'player' then
