@@ -152,12 +152,33 @@ local function layout(self, unit)
 	
 		local curhealth = self.Health:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmallLeft')
 		curhealth:SetPoint('BOTTOM', self, 0, -20)
+		self.Health.hTag = curhealth
 		self:Tag(curhealth,'[shortcurhp]')
 	
 		local perhealth = self.Health:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmallLeft')
 		perhealth:SetPoint('BOTTOMLEFT', self, 0, -20)
+		self.Health.pTag = perhealth
 		self:Tag(perhealth,'[perhp]%')
 
+		self.Health.PostUpdate = function(health, unit, min, max)
+			if (not UnitIsConnected(unit)) or UnitIsDead(unit) or UnitIsGhost(unit) then
+				health:SetValue(0)
+				if(not UnitIsConnected(unit) and unit == 'target') then
+					health.hTag:SetText(0)
+					health.pTag:SetText("offline")
+					health.pTag:SetTextColor(.8,.8,.8)
+				elseif(UnitIsGhost(unit) and unit == "target") then
+					health.hTag:SetText(0)
+					health.pTag:SetText("ghost")
+					health.pTag:SetTextColor(.8,.8,.8)
+				elseif(UnitIsDead(unit) and unit == "target") then
+					health.hTag:SetText(0)
+					health.pTag:SetText("dead")
+					health.pTag:SetTextColor(.7,.7,.7)
+				end
+			end
+		end
+		
 		local healthbg = self.Health:CreateTexture(nil, 'BORDER')
 		healthbg:SetPoint('CENTER', curhealth, 'CENTER', 1, 0)
 		healthbg:SetTexture(bartexture)
@@ -211,13 +232,21 @@ local function layout(self, unit)
 	if unit == 'player' then
 		self.Castbar:SetPoint('CENTER', oUF.units.player, 'CENTER', 0, -80)
 		self.Castbar:SetStatusBarColor(1, 0.50, 0)
+		
+		--resting while in city
+		self.Resting = self.Health:CreateTexture(nil, "OVERLAY")
+		self.Resting:SetHeight(20)
+		self.Resting:SetWidth(20)
+		self.Resting:SetPoint("CENTER", self, "TOPLEFT")
+
+		--incombat indicator
+		self.Combat = self.Health:CreateTexture(nil, "OVERLAY")
+		self.Combat:SetHeight(20)
+		self.Combat:SetWidth(20)
+		self.Combat:SetPoint("CENTER", self, "TOPRIGHT")
+
 	end
-	
-	if unit == 'target' then
-		self.Castbar:SetPoint('CENTER', oUF.units.target, 'CENTER', 0, -80)
-		self.Castbar:SetStatusBarColor(0.80, 0.01, 0)
-	end
-	
+
 	local unitnames = self.Health:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmallLeft')
 	self:Tag(unitnames,'[name]')
 
@@ -232,6 +261,9 @@ local function layout(self, unit)
 	if unit == 'target' then
 		unitnames:SetPoint('LEFT', self, -1, 20)
 		
+		self.Castbar:SetPoint('CENTER', oUF.units.target, 'CENTER', 0, -80)
+		self.Castbar:SetStatusBarColor(0.80, 0.01, 0)
+	
 		self.Buffs = CreateFrame('Frame', nil, self)
 		self.Buffs.size = 20
 		self.Buffs:SetHeight(self.Buffs.size)
@@ -251,9 +283,7 @@ local function layout(self, unit)
 		self.Debuffs['growth-y'] = 'DOWN'
 		self.Debuffs.num = 11
 		self.Debuffs.spacing = 2
-	end
 
-	if unit == 'target' then
 		self.CPoints = {}
 		for id = 1, MAX_COMBO_POINTS do
 			self.CPoints[id] = CreateFrame('StatusBar', nil, self)
