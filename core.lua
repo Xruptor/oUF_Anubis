@@ -1,10 +1,10 @@
 local bartexture = 'Interface\\AddOns\\oUF_Anubis\\texture\\statusbar'
 local bufftexture = 'Interface\\AddOns\\oUF_Anubis\\texture\\buff'
 local _, PlayerClass = UnitClass("player")
-local petAdjust = 0
 
 --Settings
 local showPortait = true
+local petAdjust = 0
 
 oUF.colors.power = {
 	["MANA"] = {26/255, 139/255, 255/255 },
@@ -221,15 +221,17 @@ local function layout(self, unit)
 	local unitnames = self.Health:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmallLeft')
 	self:Tag(unitnames,'[name]')
 
-	if unit == 'target' then
-		unitnames:SetPoint('LEFT', self, -1, 20)
-
+	if unit == 'player' or unit == 'target' then
 		self.RaidIcon = self.Health:CreateTexture(nil, 'OVERLAY')
 		self.RaidIcon:SetHeight(16)
 		self.RaidIcon:SetWidth(16)
-		self.RaidIcon:SetPoint('TOP', self, 0, 9)
+		self.RaidIcon:SetPoint('TOP', self, 0, 0)
 		self.RaidIcon:SetTexture'Interface\\TargetingFrame\\UI-RaidTargetingIcons'
-	
+	end
+		
+	if unit == 'target' then
+		unitnames:SetPoint('LEFT', self, -1, 20)
+		
 		self.Buffs = CreateFrame('Frame', nil, self)
 		self.Buffs.size = 20
 		self.Buffs:SetHeight(self.Buffs.size)
