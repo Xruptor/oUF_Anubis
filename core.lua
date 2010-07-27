@@ -1,6 +1,7 @@
 local bartexture = 'Interface\\AddOns\\oUF_Anubis\\texture\\statusbar'
 local bufftexture = 'Interface\\AddOns\\oUF_Anubis\\texture\\buff'
 local _, PlayerClass = UnitClass("player")
+local petAdjust = 0
 
 oUF.colors.power = {
 	["MANA"] = {26/255, 139/255, 255/255 },
@@ -127,7 +128,7 @@ local function layout(self, unit)
 
 	if unit == 'player' or unit == 'target' then
 		self:SetAttribute('initial-height', 20)
-	    	self:SetAttribute('initial-width', 250)
+	    self:SetAttribute('initial-width', 250)
 
 		self.Power = CreateFrame('StatusBar', nil, self)
 		self.Power:SetStatusBarTexture(bartexture)
@@ -251,7 +252,7 @@ local function layout(self, unit)
 		self:RegisterEvent('UNIT_COMBO_POINTS', updateCombo)
 	end
 	
-	if unit == 'focus' or unit == 'targettarget' or unit == 'pet' then
+	if unit == 'focus' or unit == 'targettarget' then
 	    self:SetAttribute('initial-height', 12)
 	    self:SetAttribute('initial-width', 100)
 		unitnames:SetPoint('LEFT', self, 0, 0)
@@ -265,8 +266,60 @@ local function layout(self, unit)
 			self.Health.colorReaction = false
 			self.Health.colorClass = false
 			self.Health.colorHappiness = true
-		end	
+		end
+		
+	    self:SetAttribute('initial-height', 19)
+	    self:SetAttribute('initial-width', 100)
+		unitnames:SetPoint('LEFT', self, 0, 2)
+		unitnames:SetWidth(90)
+		unitnames:SetHeight(10)
+		
+		self.Power = CreateFrame('StatusBar', nil, self)
+		self.Power:SetStatusBarTexture(bartexture)
+		self.Power:SetHeight(5)
+		self.Power:SetPoint('TOP', self.Health, 'BOTTOM', 0, -1.45)
+
+		self.Power:SetParent(self)
+		self.Power:SetPoint'LEFT'
+		self.Power:SetPoint'RIGHT'
+
+		self.Power.colorPower = true
+		self.Power.frequentUpdates = true
+
+		self.Power.bg = self.Power:CreateTexture(nil, 'BORDER')
+		self.Power.bg:SetAllPoints(self.Power)
+		self.Power.bg:SetTexture(bartexture)
+		self.Power.bg:SetAlpha(0.3)
 	end
+	
+	if(PlayerClass == "DEATHKNIGHT") then
+		if unit == 'player' then
+			self.Runes = CreateFrame("Frame", nil, self)
+			for id = 1, 6 do
+				self.Runes[id] = CreateFrame('StatusBar', nil, self)
+
+				if (id > 1) then
+					self.Runes[id]:SetPoint('TOPLEFT', self.Runes[id-1], 'TOPRIGHT', 1, 0)
+				else
+					self.Runes[id]:SetPoint('TOPLEFT', self, 'BOTTOMLEFT', -1, -25)
+				end
+
+				self.Runes[id]:SetStatusBarTexture(bartexture)
+				self.Runes[id]:SetStatusBarColor(1, 0.8, 0)
+				self.Runes[id]:SetHeight(6)
+				self.Runes[id]:SetWidth(248 / 6)
+				
+				self.Runes[id].bg = self.Runes[id]:CreateTexture(nil, "BORDER")
+				self.Runes[id].bg:SetTexture(bartexture)
+				self.Runes[id].bg:SetPoint("TOPLEFT", self.Runes[id], "TOPLEFT", -1, 1)
+				self.Runes[id].bg:SetPoint("BOTTOMRIGHT", self.Runes[id], "BOTTOMRIGHT", 1, -1)
+				self.Runes[id].bg.multiplier = 0.3
+			end
+		elseif unit == 'pet' then
+			petAdjust = -10
+		end
+	end
+		
 end
 
 oUF:RegisterStyle('oUF_Anubis', layout)
@@ -276,4 +329,4 @@ oUF:Spawn('player'):SetPoint('CENTER', -200, -300)
 oUF:Spawn('focus'):SetPoint('TOPLEFT', oUF.units.player, 0, 30)
 oUF:Spawn('target'):SetPoint('CENTER', 200, -300)
 oUF:Spawn('targettarget'):SetPoint('TOPRIGHT', oUF.units.target, 0, 30)
-oUF:Spawn('pet'):SetPoint('BOTTOMLEFT', oUF.units.player, 0, -40)
+oUF:Spawn('pet'):SetPoint('BOTTOMLEFT', oUF.units.player, 0, -55 + petAdjust)
