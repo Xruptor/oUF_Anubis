@@ -1,3 +1,5 @@
+--special thanks to the creators of oUF_zp, oUF_lily, and oUF_Lumen
+
 local bartexture = 'Interface\\AddOns\\oUF_Anubis\\texture\\statusbar'
 local bufftexture = 'Interface\\AddOns\\oUF_Anubis\\texture\\buff'
 local _, PlayerClass = UnitClass("player")
@@ -5,6 +7,7 @@ local _, PlayerClass = UnitClass("player")
 --Settings
 local showPortait = true
 local petAdjust = 0
+local showPlayerCastBar = true
 
 oUF.colors.power = {
 	["MANA"] = {26/255, 139/255, 255/255 },
@@ -72,6 +75,63 @@ oUF.Tags['shortcurhp'] = function(u) return shorthpval(UnitHealth(u)) end
 
 oUF.TagEvents['shortcurpp'] = 'UNIT_ENERGY UNIT_FOCUS UNIT_MANA UNIT_RAGE'
 oUF.Tags['shortcurpp'] = function(u) return shorthpval(UnitPower(u)) end
+
+oUF.TagEvents["c_unitinfo"] = "UNIT_LEVEL PLAYER_LEVEL_UP UNIT_CLASSIFICATION_CHANGED"
+oUF.Tags["c_unitinfo"] = function(unit)
+	local classInfo = UnitClassification(unit)
+	local level = UnitLevel(unit)
+	local lvlc = GetQuestDifficultyColor(level)
+	local race = UnitRace(unit)
+	
+	local cType = UnitCreatureFamily(unit)
+	if (not cType) then cType = '' end
+	
+	local str = ""
+
+	if classInfo == "worldboss" then
+		str = string.format("|cff%02x%02x%02xBoss|r", 250, 20, 0)
+	elseif classInfo == "eliterare" then
+		str = "|cff0080FFRare|r Elite"
+	elseif classInfo == "elite" then
+		str = "Elite"
+	elseif classInfo == "rare" then
+		str = "|cff0080FFRare|r"
+	else
+		if not UnitIsConnected(unit) then
+			str = "??"
+		else
+			if UnitIsPlayer(unit) then
+				str = string.format("|cffc2c2c2%s", race)
+			elseif UnitPlayerControlled(unit) then
+				str = string.format("|cffc2c2c2%s|r", cType)
+			end
+		end		
+	end
+	return str
+end
+
+oUF.Tags["c_unitname"] = function(unit)
+
+	local level = UnitLevel(unit)
+	local lvlc = GetQuestDifficultyColor(level)
+	local name = UnitName(unit) or "Unknown"
+
+	local str = ""
+	
+	if level <= 0 then level = "??" end
+	
+	if UnitIsFriend("player", unit) and not UnitIsPlayer(unit) then
+		lvlc = GetQuestDifficultyColor(UnitLevel("player"))
+	end
+		
+	if not UnitIsConnected(unit) then
+		str = "??"
+	else
+		str = string.format("|cff%02x%02x%02x%s|r %s", lvlc.r*255, lvlc.g*255, lvlc.b*255, level, name)
+	end
+	
+	return str
+end
 
 local auraIcon = function(self, button, icons)
 	icons.showDebuffType = true
@@ -191,25 +251,27 @@ local function layout(self, unit)
 		curpower.frequentUpdates = 0.1
 		self:Tag(curpower,'[shortcurpp]')
 
-		self.Castbar = CreateFrame('StatusBar', nil, self)
-		self.Castbar:SetBackdrop({bgFile = 'Interface\ChatFrame\ChatFrameBackground', insets = {top = -3, left = -3, bottom = -3, right = -3}})
-		self.Castbar:SetBackdropColor(0, 0, 0)
-		self.Castbar:SetWidth(254)
-		self.Castbar:SetHeight(8)
-		self.Castbar:SetStatusBarTexture(bartexture)
-	
-		self.Castbar.bg = self.Castbar:CreateTexture(nil, 'BORDER')
-		self.Castbar.bg:SetAllPoints(self.Castbar)
-		self.Castbar.bg:SetTexture(bartexture)
-		self.Castbar.bg:SetVertexColor(0,0,0,0.5)
+		if (unit == 'player' and showPlayerCastBar) or unit == 'target' then
+			self.Castbar = CreateFrame('StatusBar', nil, self)
+			self.Castbar:SetBackdrop({bgFile = 'Interface\ChatFrame\ChatFrameBackground', insets = {top = -3, left = -3, bottom = -3, right = -3}})
+			self.Castbar:SetBackdropColor(0, 0, 0)
+			self.Castbar:SetWidth(254)
+			self.Castbar:SetHeight(8)
+			self.Castbar:SetStatusBarTexture(bartexture)
 		
-		self.Castbar.Text = self.Castbar:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmallLeft')
-		self.Castbar.Text:SetPoint('LEFT', self.Castbar, 0, 12)
-		self.Castbar.Text:SetTextColor(1, 1, 1)
-	
-		self.Castbar.Time = self.Castbar:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmallRight')
-		self.Castbar.Time:SetPoint('RIGHT', self.Castbar, -3, 12)
-		self.Castbar.Time:SetTextColor(1, 1, 1)
+			self.Castbar.bg = self.Castbar:CreateTexture(nil, 'BORDER')
+			self.Castbar.bg:SetAllPoints(self.Castbar)
+			self.Castbar.bg:SetTexture(bartexture)
+			self.Castbar.bg:SetVertexColor(0,0,0,0.5)
+			
+			self.Castbar.Text = self.Castbar:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmallLeft')
+			self.Castbar.Text:SetPoint('LEFT', self.Castbar, 0, 12)
+			self.Castbar.Text:SetTextColor(1, 1, 1)
+		
+			self.Castbar.Time = self.Castbar:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmallRight')
+			self.Castbar.Time:SetPoint('RIGHT', self.Castbar, -3, 12)
+			self.Castbar.Time:SetTextColor(1, 1, 1)
+		end
 		
 		if showPortait then
 			self.Portrait = CreateFrame('PlayerModel', nil, self)
@@ -230,8 +292,10 @@ local function layout(self, unit)
 	end
 
 	if unit == 'player' then
-		self.Castbar:SetPoint('CENTER', oUF.units.player, 'CENTER', 0, -80)
-		self.Castbar:SetStatusBarColor(1, 0.50, 0)
+		if showPlayerCastBar then
+			self.Castbar:SetPoint('CENTER', oUF.units.player, 'CENTER', 0, -80 + petAdjust)
+			self.Castbar:SetStatusBarColor(1, 0.50, 0)
+		end
 		
 		--resting while in city
 		self.Resting = self.Health:CreateTexture(nil, "OVERLAY")
@@ -248,7 +312,14 @@ local function layout(self, unit)
 	end
 
 	local unitnames = self.Health:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmallLeft')
-	self:Tag(unitnames,'[name]')
+	if unit ~= 'target' then
+		self:Tag(unitnames,'[name]')
+	else
+		self:Tag(unitnames,'[c_unitname]')
+	end
+	
+	local unitinfo = self.Health:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmallLeft')
+	self:Tag(unitinfo,'[c_unitinfo]')
 
 	if unit == 'player' or unit == 'target' then
 		self.RaidIcon = self.Health:CreateTexture(nil, 'OVERLAY')
@@ -259,7 +330,9 @@ local function layout(self, unit)
 	end
 		
 	if unit == 'target' then
-		unitnames:SetPoint('LEFT', self, -1, 20)
+		unitinfo:SetJustifyH("LEFT")
+		unitinfo:SetPoint('RIGHT', self, -3, 3)
+		unitnames:SetPoint('LEFT', self, 3, 3)
 		
 		self.Castbar:SetPoint('CENTER', oUF.units.target, 'CENTER', 0, -80)
 		self.Castbar:SetStatusBarColor(0.80, 0.01, 0)
@@ -268,7 +341,7 @@ local function layout(self, unit)
 		self.Buffs.size = 20
 		self.Buffs:SetHeight(self.Buffs.size)
 		self.Buffs:SetWidth(self.Buffs.size * 5)
-		self.Buffs:SetPoint('BOTTOMLEFT', self, 'TOPLEFT', -2, 20)
+		self.Buffs:SetPoint('BOTTOMLEFT', self, 'TOPLEFT', -2, 5)
 		self.Buffs.initialAnchor = 'BOTTOMLEFT'
 		self.Buffs['growth-y'] = 'TOP'
 		self.Buffs.num = 20
@@ -366,6 +439,10 @@ local function layout(self, unit)
 				self.Runes[id].bg:SetPoint("TOPLEFT", self.Runes[id], "TOPLEFT", -1, 1)
 				self.Runes[id].bg:SetPoint("BOTTOMRIGHT", self.Runes[id], "BOTTOMRIGHT", 1, -1)
 				self.Runes[id].bg.multiplier = 0.3
+			end
+			if showPlayerCastBar then
+				self.Castbar:SetPoint('CENTER', oUF.units.player, 'CENTER', 0, -100)
+				self.Castbar:SetStatusBarColor(1, 0.50, 0)
 			end
 		elseif unit == 'pet' then
 			petAdjust = -10
