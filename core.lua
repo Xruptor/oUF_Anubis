@@ -80,6 +80,7 @@ oUF.Tags['shortcurpp'] = function(u) return shorthpval(UnitPower(u)) end
 
 oUF.TagEvents["c_unitinfo"] = "UNIT_LEVEL PLAYER_LEVEL_UP UNIT_CLASSIFICATION_CHANGED"
 oUF.Tags["c_unitinfo"] = function(unit)
+
 	local classInfo = UnitClassification(unit)
 	local level = UnitLevel(unit)
 	local lvlc = GetQuestDifficultyColor(level)
@@ -152,6 +153,25 @@ local auraIcon = function(self, button, icons)
 	button.cd.noCooldownCount = true     
 end
 
+--Plugins
+local SmoothUpdate = function(self)
+	if IsAddOnLoaded("oUF_Smooth") then
+		self.Health.Smooth = true
+		if self.Power then self.Power.Smooth = true end
+		if self.Castbar then self:SmoothBar(self.Castbar) end
+		if self.CPoints then
+			for i = 1, MAX_COMBO_POINTS do
+				self:SmoothBar(self.CPoints[i])
+			end
+		end
+		if self.Runes then
+			for i = 1, 6 do
+				self:SmoothBar(self.Runes[i])
+			end
+		end
+	end	
+end
+
 local function layout(self, unit)
 
 	self.menu = menu
@@ -186,7 +206,7 @@ local function layout(self, unit)
 	self.Health.bg:SetAllPoints(self.Health)
 	self.Health.bg:SetTexture(bartexture)
 	self.Health.bg:SetAlpha(0.3)
-
+	
 	if unit ~= 'player' then
 		self.disallowVehicleSwap = true
 	end
@@ -211,7 +231,7 @@ local function layout(self, unit)
 		self.Power.bg:SetAllPoints(self.Power)
 		self.Power.bg:SetTexture(bartexture)
 		self.Power.bg:SetAlpha(0.3)
-	
+
 		local curhealth = self.Health:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmallLeft')
 		curhealth:SetPoint('BOTTOM', self, 0, -20)
 		self.Health.hTag = curhealth
@@ -370,6 +390,25 @@ local function layout(self, unit)
 			self.Buffs.spacing = 2
 		end
 
+		self.CPoints = {}
+		for i = 1, MAX_COMBO_POINTS do
+			self.CPoints[i] = CreateFrame('StatusBar', nil, self)
+
+			if (i > 1) then
+				self.CPoints[i]:SetPoint('TOPLEFT', self.CPoints[i-1], 'TOPRIGHT', 1, 0)
+			else
+				self.CPoints[i]:SetPoint('TOPLEFT', self, 'BOTTOMLEFT', -1, -25)
+			end
+
+			self.CPoints[i]:SetStatusBarTexture(bartexture)
+			self.CPoints[i]:SetStatusBarColor(1, 0.8, 0)
+			self.CPoints[i]:SetHeight(6)
+			self.CPoints[i]:SetWidth(250 / MAX_COMBO_POINTS)
+		end
+
+		self.CPoints.unit = PlayerFrame.unit
+		self:RegisterEvent('UNIT_COMBO_POINTS', updateCombo)
+		
 		self.Debuffs = CreateFrame('Frame', nil, self)
 		self.Debuffs.size = 20
 		self.Debuffs:SetHeight(self.Debuffs.size)
@@ -379,25 +418,7 @@ local function layout(self, unit)
 		self.Debuffs['growth-y'] = 'DOWN'
 		self.Debuffs.num = 11
 		self.Debuffs.spacing = 2
-
-		self.CPoints = {}
-		for id = 1, MAX_COMBO_POINTS do
-			self.CPoints[id] = CreateFrame('StatusBar', nil, self)
-
-			if (id > 1) then
-				self.CPoints[id]:SetPoint('TOPLEFT', self.CPoints[id-1], 'TOPRIGHT', 1, 0)
-			else
-				self.CPoints[id]:SetPoint('TOPLEFT', self, 'BOTTOMLEFT', -1, -25)
-			end
-
-			self.CPoints[id]:SetStatusBarTexture(bartexture)
-			self.CPoints[id]:SetStatusBarColor(1, 0.8, 0)
-			self.CPoints[id]:SetHeight(6)
-			self.CPoints[id]:SetWidth(250 / MAX_COMBO_POINTS)
-		end
-
-		self.CPoints.unit = PlayerFrame.unit
-		self:RegisterEvent('UNIT_COMBO_POINTS', updateCombo)
+		
 	end
 	
 	if unit == 'focus' or unit == 'targettarget' then
@@ -438,39 +459,43 @@ local function layout(self, unit)
 		self.Power.bg:SetAllPoints(self.Power)
 		self.Power.bg:SetTexture(bartexture)
 		self.Power.bg:SetAlpha(0.3)
+
 	end
 	
-	if(PlayerClass == "DEATHKNIGHT") then
+	if PlayerClass == "DEATHKNIGHT" then
 		if unit == 'player' then
 			self.Runes = CreateFrame("Frame", nil, self)
-			for id = 1, 6 do
-				self.Runes[id] = CreateFrame('StatusBar', nil, self)
+			for i = 1, 6 do
+				self.Runes[i] = CreateFrame('StatusBar', nil, self)
 
-				if (id > 1) then
-					self.Runes[id]:SetPoint('TOPLEFT', self.Runes[id-1], 'TOPRIGHT', 1, 0)
+				if (i > 1) then
+					self.Runes[i]:SetPoint('TOPLEFT', self.Runes[i-1], 'TOPRIGHT', 1, 0)
 				else
-					self.Runes[id]:SetPoint('TOPLEFT', self, 'BOTTOMLEFT', -1, -25)
+					self.Runes[i]:SetPoint('TOPLEFT', self, 'BOTTOMLEFT', -1, -25)
 				end
 
-				self.Runes[id]:SetStatusBarTexture(bartexture)
-				self.Runes[id]:SetStatusBarColor(1, 0.8, 0)
-				self.Runes[id]:SetHeight(6)
-				self.Runes[id]:SetWidth(248 / 6)
+				self.Runes[i]:SetStatusBarTexture(bartexture)
+				self.Runes[i]:SetStatusBarColor(1, 0.8, 0)
+				self.Runes[i]:SetHeight(6)
+				self.Runes[i]:SetWidth(248 / 6)
 				
-				self.Runes[id].bg = self.Runes[id]:CreateTexture(nil, "BORDER")
-				self.Runes[id].bg:SetTexture(bartexture)
-				self.Runes[id].bg:SetPoint("TOPLEFT", self.Runes[id], "TOPLEFT", -1, 1)
-				self.Runes[id].bg:SetPoint("BOTTOMRIGHT", self.Runes[id], "BOTTOMRIGHT", 1, -1)
-				self.Runes[id].bg.multiplier = 0.3
+				self.Runes[i].bg = self.Runes[i]:CreateTexture(nil, "BORDER")
+				self.Runes[i].bg:SetTexture(bartexture)
+				self.Runes[i].bg:SetPoint("TOPLEFT", self.Runes[i], "TOPLEFT", -1, 1)
+				self.Runes[i].bg:SetPoint("BOTTOMRIGHT", self.Runes[i], "BOTTOMRIGHT", 1, -1)
+				self.Runes[i].bg.multiplier = 0.3
 			end
 			if showPlayerCastBar then
-				self.Castbar:SetPoint('CENTER', oUF.units.player, 'CENTER', 0, -100)
+				self.Castbar:SetPoint('CENTER', oUF.units.player, 'CENTER', 0, -110)
 				self.Castbar:SetStatusBarColor(1, 0.50, 0)
 			end
 		elseif unit == 'pet' then
 			petAdjust = -10
 		end
 	end
+		
+	--plugins
+	SmoothUpdate(self)
 		
 end
 

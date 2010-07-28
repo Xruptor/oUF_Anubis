@@ -4,5 +4,6 @@
 ## Author: Xruptor
 ## Version: 1.1
 ## RequiredDeps: oUF
+## OptionalDeps: oUF_PowerSpark, oUF_MovableFrames, oUF_TotemBar, oUF_Smooth
 
-core.lua
+oUF_Anubis.lua
