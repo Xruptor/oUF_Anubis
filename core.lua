@@ -8,6 +8,8 @@ local _, PlayerClass = UnitClass("player")
 local showPortait = true
 local petAdjust = 0
 local showPlayerCastBar = true
+local showTargetBuffs = true
+local maxNumTargetBuffs = 10
 
 oUF.colors.power = {
 	["MANA"] = {26/255, 139/255, 255/255 },
@@ -117,7 +119,7 @@ oUF.Tags["c_unitname"] = function(unit)
 	local name = UnitName(unit) or "Unknown"
 
 	local str = ""
-	
+
 	if level <= 0 then level = "??" end
 	
 	if UnitIsFriend("player", unit) and not UnitIsPlayer(unit) then
@@ -301,51 +303,72 @@ local function layout(self, unit)
 		self.Resting = self.Health:CreateTexture(nil, "OVERLAY")
 		self.Resting:SetHeight(20)
 		self.Resting:SetWidth(20)
-		self.Resting:SetPoint("CENTER", self, "TOPLEFT")
+		self.Resting:SetPoint("CENTER", self, "TOPLEFT", 0, 3)
 
 		--incombat indicator
 		self.Combat = self.Health:CreateTexture(nil, "OVERLAY")
 		self.Combat:SetHeight(20)
 		self.Combat:SetWidth(20)
-		self.Combat:SetPoint("CENTER", self, "TOPRIGHT")
+		self.Combat:SetPoint("CENTER", self, "TOPRIGHT", -20, 3)
 
+		--party leader
+		self.Leader = self.Health:CreateTexture(nil, 'OVERLAY')
+		self.Leader:SetHeight(15)
+		self.Leader:SetWidth(15)
+		self.Leader:SetPoint("CENTER", self, "TOPLEFT", 20, 3)
+		self.Leader:SetTexture('Interface\\GroupFrame\\UI-Group-LeaderIcon')
+		
+		--pvp icon
+		self.PvP = self.Health:CreateTexture(nil, "OVERLAY")
+		self.PvP:SetHeight(30)
+		self.PvP:SetWidth(30)
+		self.PvP:SetPoint("CENTER", self, "TOPRIGHT", 4, -3)
+		
 	end
 
 	local unitnames = self.Health:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmallLeft')
-	if unit ~= 'target' then
-		self:Tag(unitnames,'[name]')
-	else
+	if unit == 'target' or unit == 'player' then
 		self:Tag(unitnames,'[c_unitname]')
+	else
+		self:Tag(unitnames,'[name]')
 	end
 	
 	local unitinfo = self.Health:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmallLeft')
 	self:Tag(unitinfo,'[c_unitinfo]')
 
 	if unit == 'player' or unit == 'target' then
-		self.RaidIcon = self.Health:CreateTexture(nil, 'OVERLAY')
-		self.RaidIcon:SetHeight(16)
-		self.RaidIcon:SetWidth(16)
-		self.RaidIcon:SetPoint('TOP', self, 0, 0)
-		self.RaidIcon:SetTexture'Interface\\TargetingFrame\\UI-RaidTargetingIcons'
-	end
-		
-	if unit == 'target' then
 		unitinfo:SetJustifyH("LEFT")
 		unitinfo:SetPoint('RIGHT', self, -3, 3)
 		unitnames:SetPoint('LEFT', self, 3, 3)
 		
+		self.RaidIcon = self.Health:CreateTexture(nil, 'OVERLAY')
+		self.RaidIcon:SetHeight(16)
+		self.RaidIcon:SetWidth(16)
+		self.RaidIcon:SetPoint('TOP', self, 0, 10)
+		self.RaidIcon:SetTexture'Interface\\TargetingFrame\\UI-RaidTargetingIcons'
+	end
+		
+	if unit == 'target' then
 		self.Castbar:SetPoint('CENTER', oUF.units.target, 'CENTER', 0, -80)
 		self.Castbar:SetStatusBarColor(0.80, 0.01, 0)
-	
-		self.Buffs = CreateFrame('Frame', nil, self)
-		self.Buffs.size = 20
-		self.Buffs:SetHeight(self.Buffs.size)
-		self.Buffs:SetWidth(self.Buffs.size * 5)
-		self.Buffs:SetPoint('BOTTOMLEFT', self, 'TOPLEFT', -2, 5)
-		self.Buffs.initialAnchor = 'BOTTOMLEFT'
-		self.Buffs['growth-y'] = 'TOP'
-		self.Buffs.num = 20
-		self.Buffs.spacing = 2
+		
+		--pvp icon
+		self.PvP = self.Health:CreateTexture(nil, "OVERLAY")
+		self.PvP:SetHeight(30)
+		self.PvP:SetWidth(30)
+		self.PvP:SetPoint("CENTER", self, "TOPRIGHT", 4, -3)
+		
+		if showTargetBuffs then
+			self.Buffs = CreateFrame('Frame', nil, self)
+			self.Buffs.size = 20
+			self.Buffs:SetHeight(self.Buffs.size)
+			self.Buffs:SetWidth(self.Buffs.size * 5)
+			self.Buffs:SetPoint('BOTTOMLEFT', self, 'TOPLEFT', -2, 5)
+			self.Buffs.initialAnchor = 'BOTTOMLEFT'
+			self.Buffs['growth-y'] = 'TOP'
+			self.Buffs.num = maxNumTargetBuffs
+			self.Buffs.spacing = 2
+		end
 
 		self.Debuffs = CreateFrame('Frame', nil, self)
 		self.Debuffs.size = 20
