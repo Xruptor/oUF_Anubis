@@ -10,7 +10,7 @@ local showPortait = true
 local showPlayerCastBar = true
 local showTargetBuffs = true
 local maxNumTargetBuffs = 10
-local playerCastBarAdjust = 0
+local playerCastBarAdjust = -60
 
 oUF.colors.power = {
 	["MANA"] = {26/255, 139/255, 255/255 },
@@ -370,7 +370,7 @@ local function layout(self, unit)
 			self.Castbar.Icon:SetTexCoord(0.1,0.9,0.1,0.9)
 			self.Castbar.Icon:SetHeight(16)
 			self.Castbar.Icon:SetWidth(16)
-			self.Castbar.Icon:SetPoint("LEFT", self.Castbar, -17, 0)
+			self.Castbar.Icon:SetPoint("LEFT", self.Castbar, -19, 0)
 		end
 		
 		if showPortait then
@@ -404,7 +404,7 @@ local function layout(self, unit)
 	if unit == 'player' then
 		if self.Castbar and showPlayerCastBar then
 			self.Castbar:SetStatusBarColor(1, 0.50, 0)
-			self.Castbar:SetPoint('CENTER', oUF.units.player, 'CENTER', 0, -90)
+			self.Castbar:SetPoint('CENTER', oUF.units.player, 'CENTER', 0, playerCastBarAdjust)
 		end
 		
 		--resting while in city
@@ -436,7 +436,7 @@ local function layout(self, unit)
 
 	if unit == 'target' then
 		self.Castbar:SetStatusBarColor(0.80, 0.01, 0)
-		self.Castbar:SetPoint('CENTER', oUF.units.target, 'CENTER', 0, -90)
+		self.Castbar:SetPoint('CENTER', oUF.units.target, 'CENTER', 0, playerCastBarAdjust)
 		
 		--pvp icon
 		self.PvP = self.Health:CreateTexture(nil, "OVERLAY")
@@ -535,17 +535,28 @@ local function layout(self, unit)
 
 	--do positional updates based on bars and pet frame
 	if unit == 'player' and showPlayerCastBar then
-
+	
 		if petAdjust ~= 0 then
-			self.Castbar:SetPoint('CENTER', oUF.units.player, 'CENTER', 0, -90)
+			self.Castbar.adjust = playerCastBarAdjust + petAdjust
+			self.Castbar:SetPoint('CENTER', oUF.units.player, 'CENTER', 0, playerCastBarAdjust + petAdjust)
+		else
+			self.Castbar.adjust = playerCastBarAdjust
 		end
 		
-		-- self.Castbar:SetPoint('CENTER', oUF.units.player, 'CENTER', 0, -90)
-		-- self.Castbar:SetStatusBarColor(1, 0.50, 0)
+		local swapPosition = function(Castbar, unit, name, rank, text, castid)
+			if unit == 'player' then
+				if oUF.units.pet and oUF.units.pet:IsVisible() then
+					self.Castbar:SetPoint('CENTER', oUF.units.player, 'CENTER', 0, Castbar.adjust + -40)
+				else
+					self.Castbar:SetPoint('CENTER', oUF.units.player, 'CENTER', 0, Castbar.adjust)
+				end
+			end
+		end
 		
-			-- fr.Castbar.PostCastStart = myPostCastStart
-			-- fr.Castbar.PostChannelStart = myPostChannelStart
-			
+		-- PostCast Start Function
+		self.Castbar.PostCastStart = swapPosition
+		self.Castbar.PostChannelStart = swapPosition
+
 	end
 	
 end
