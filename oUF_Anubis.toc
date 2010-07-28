@@ -4,6 +4,6 @@
 ## Author: Xruptor
 ## Version: 1.1
 ## RequiredDeps: oUF
-## OptionalDeps: oUF_PowerSpark, oUF_MovableFrames, oUF_TotemBar, oUF_Smooth
+## OptionalDeps: oUF_PowerSpark, oUF_MovableFrames, oUF_TotemBar, oUF_Smooth, oUF_HealComm4
 
 oUF_Anubis.lua

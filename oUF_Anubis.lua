@@ -154,7 +154,10 @@ local auraIcon = function(self, button, icons)
 	button.cd.noCooldownCount = true     
 end
 
---Plugins
+---------------
+---PLUGINS
+---------------
+
 local SmoothUpdate = function(self)
 	if IsAddOnLoaded("oUF_Smooth") then
 		self.Health.Smooth = true
@@ -232,6 +235,23 @@ local RuneBar = function(self, unit)
 	end
 end
 
+local HealComm4 = function(self)	
+	if IsAddOnLoaded("oUF_HealComm4") then
+		self.HealCommBar = CreateFrame('StatusBar', nil, self.Health)
+		self.HealCommBar:SetHeight(15)
+		self.HealCommBar:SetWidth(self.Health:GetWidth())
+		self.HealCommBar:SetStatusBarTexture(self.Health:GetStatusBarTexture():GetTexture())
+		self.HealCommBar:SetStatusBarColor(0, 0.8, 0, 0.5)
+		self.HealCommBar:SetPoint('LEFT', self.Health, 'LEFT')
+		self.allowHealCommOverflow = false
+		self.HealCommOthersOnly = false
+	end
+end
+
+---------------
+---LAYOUT
+---------------
+
 local function layout(self, unit)
 	petAdjust = 0
 	castBarAdjust = 0
@@ -255,9 +275,9 @@ local function layout(self, unit)
 	self.Health:SetHeight(15)
 
 	self.Health:SetParent(self)
-	self.Health:SetPoint'TOP'
-	self.Health:SetPoint'LEFT'
-	self.Health:SetPoint'RIGHT'
+	self.Health:SetPoint('TOP')
+	self.Health:SetPoint('LEFT')
+	self.Health:SetPoint('RIGHT')
 
 	self.Health.colorClass = true
 	self.Health.colorTapping = true
@@ -293,8 +313,8 @@ local function layout(self, unit)
 		self.Power:SetPoint('TOP', self.Health, 'BOTTOM', 0, -1.45)
 
 		self.Power:SetParent(self)
-		self.Power:SetPoint'LEFT'
-		self.Power:SetPoint'RIGHT'
+		self.Power:SetPoint('LEFT')
+		self.Power:SetPoint('RIGHT')
 
 		self.Power.colorPower = true
 		self.Power.frequentUpdates = true
@@ -436,7 +456,7 @@ local function layout(self, unit)
 
 	if unit == 'target' then
 		self.Castbar:SetStatusBarColor(0.80, 0.01, 0)
-		self.Castbar:SetPoint('CENTER', oUF.units.target, 'CENTER', 0, playerCastBarAdjust)
+		self.Castbar:SetPoint('CENTER', oUF.units.target, 'CENTER', 0, playerCastBarAdjust + -35)
 		
 		--pvp icon
 		self.PvP = self.Health:CreateTexture(nil, "OVERLAY")
@@ -532,6 +552,7 @@ local function layout(self, unit)
 	RuneBar(self, unit)
 	TotemBar(self, unit)
 	SmoothUpdate(self)
+	HealComm4(self)
 
 	--do positional updates based on bars and pet frame
 	if unit == 'player' and showPlayerCastBar then
