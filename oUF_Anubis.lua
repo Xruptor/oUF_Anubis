@@ -3,13 +3,14 @@
 local bartexture = 'Interface\\AddOns\\oUF_Anubis\\texture\\statusbar'
 local bufftexture = 'Interface\\AddOns\\oUF_Anubis\\texture\\buff'
 local _, PlayerClass = UnitClass("player")
+local petAdjust = 0 --don't touch
 
 --Settings
 local showPortait = true
-local petAdjust = 0
 local showPlayerCastBar = true
 local showTargetBuffs = true
 local maxNumTargetBuffs = 10
+local playerCastBarAdjust = 0
 
 oUF.colors.power = {
 	["MANA"] = {26/255, 139/255, 255/255 },
@@ -172,8 +173,69 @@ local SmoothUpdate = function(self)
 	end	
 end
 
-local function layout(self, unit)
+local TotemBar = function(self, unit)
+	if IsAddOnLoaded("oUF_TotemBar") and PlayerClass == "SHAMAN" then
+		if unit == 'player' then
+			self.TotemBar = {} 
+			for i = 1, 4 do 
+				self.TotemBar[i] = CreateFrame("StatusBar", nil, self) 
+				self.TotemBar[i]:SetHeight(6) 
+				--self.TotemBar[i]:SetWidth(248/4 - 0.85)
+				self.TotemBar[i]:SetWidth(248/4)
+				
+				if (i > 1) then
+					self.TotemBar[i]:SetPoint('TOPLEFT', self.TotemBar[i-1], 'TOPRIGHT', 1, 0)
+				else
+					self.TotemBar[i]:SetPoint('TOPLEFT', self, 'BOTTOMLEFT', -1, -25)
+				end
+				
+				self.TotemBar[i]:SetStatusBarTexture(bartexture) 
+				self.TotemBar[i]:SetMinMaxValues(0, 1) 
+				self.TotemBar[i].destroy = true 
+		 
+				self.TotemBar[i].bg = self.TotemBar[i]:CreateTexture(nil, "BORDER") 
+				self.TotemBar[i].bg:SetTexture(bartexture)
+				self.TotemBar[i].bg:SetPoint("TOPLEFT", self.TotemBar[i], "TOPLEFT", -1, 1)
+				self.TotemBar[i].bg:SetPoint("BOTTOMRIGHT", self.TotemBar[i], "BOTTOMRIGHT", 1, -1)
+				self.TotemBar[i].bg.multiplier = 0.25
+			end
+		end
+		petAdjust = -10
+	end
+end
 
+local RuneBar = function(self, unit)
+	if PlayerClass == "DEATHKNIGHT" then
+		if unit == 'player' then
+			self.Runes = CreateFrame("Frame", nil, self)
+			for i = 1, 6 do
+				self.Runes[i] = CreateFrame('StatusBar', nil, self)
+
+				if (i > 1) then
+					self.Runes[i]:SetPoint('TOPLEFT', self.Runes[i-1], 'TOPRIGHT', 1, 0)
+				else
+					self.Runes[i]:SetPoint('TOPLEFT', self, 'BOTTOMLEFT', -1, -25)
+				end
+
+				self.Runes[i]:SetStatusBarTexture(bartexture)
+				self.Runes[i]:SetHeight(6)
+				self.Runes[i]:SetWidth(248 / 6)
+				
+				self.Runes[i].bg = self.Runes[i]:CreateTexture(nil, "BORDER")
+				self.Runes[i].bg:SetTexture(bartexture)
+				self.Runes[i].bg:SetPoint("TOPLEFT", self.Runes[i], "TOPLEFT", -1, 1)
+				self.Runes[i].bg:SetPoint("BOTTOMRIGHT", self.Runes[i], "BOTTOMRIGHT", 1, -1)
+				self.Runes[i].bg.multiplier = 0.3
+			end
+		end
+		petAdjust = -10
+	end
+end
+
+local function layout(self, unit)
+	petAdjust = 0
+	castBarAdjust = 0
+	
 	self.menu = menu
 	self:RegisterForClicks('AnyUp')
 	self:SetScript('OnEnter', UnitFrame_OnEnter)
@@ -210,6 +272,16 @@ local function layout(self, unit)
 	if unit ~= 'player' then
 		self.disallowVehicleSwap = true
 	end
+	
+	local unitnames = self.Health:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmallLeft')
+	if unit == 'target' or unit == 'player' then
+		self:Tag(unitnames,'[c_unitname]')
+	else
+		self:Tag(unitnames,'[name]')
+	end
+	
+	local unitinfo = self.Health:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmallLeft')
+	self:Tag(unitinfo,'[c_unitinfo]')
 
 	if unit == 'player' or unit == 'target' then
 		self:SetAttribute('initial-height', 20)
@@ -278,7 +350,7 @@ local function layout(self, unit)
 			self.Castbar:SetBackdrop({bgFile = 'Interface\ChatFrame\ChatFrameBackground', insets = {top = -3, left = -3, bottom = -3, right = -3}})
 			self.Castbar:SetBackdropColor(0, 0, 0)
 			self.Castbar:SetWidth(254)
-			self.Castbar:SetHeight(8)
+			self.Castbar:SetHeight(10)
 			self.Castbar:SetStatusBarTexture(bartexture)
 		
 			self.Castbar.bg = self.Castbar:CreateTexture(nil, 'BORDER')
@@ -293,6 +365,12 @@ local function layout(self, unit)
 			self.Castbar.Time = self.Castbar:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmallRight')
 			self.Castbar.Time:SetPoint('RIGHT', self.Castbar, -3, 12)
 			self.Castbar.Time:SetTextColor(1, 1, 1)
+			
+			self.Castbar.Icon = self.Castbar:CreateTexture(nil, 'ARTWORK')
+			self.Castbar.Icon:SetTexCoord(0.1,0.9,0.1,0.9)
+			self.Castbar.Icon:SetHeight(16)
+			self.Castbar.Icon:SetWidth(16)
+			self.Castbar.Icon:SetPoint("LEFT", self.Castbar, -17, 0)
 		end
 		
 		if showPortait then
@@ -311,12 +389,22 @@ local function layout(self, unit)
 			self.Portrait.bg:SetVertexColor(0,0,0,0.5)
 		end
 		
+		unitinfo:SetJustifyH("LEFT")
+		unitinfo:SetPoint('RIGHT', self, -3, 3)
+		unitnames:SetPoint('LEFT', self, 3, 3)
+		
+		self.RaidIcon = self.Health:CreateTexture(nil, 'OVERLAY')
+		self.RaidIcon:SetHeight(16)
+		self.RaidIcon:SetWidth(16)
+		self.RaidIcon:SetPoint('TOP', self, 0, 10)
+		self.RaidIcon:SetTexture'Interface\\TargetingFrame\\UI-RaidTargetingIcons'
+		
 	end
 
 	if unit == 'player' then
-		if showPlayerCastBar then
-			self.Castbar:SetPoint('CENTER', oUF.units.player, 'CENTER', 0, -80 + petAdjust)
+		if self.Castbar and showPlayerCastBar then
 			self.Castbar:SetStatusBarColor(1, 0.50, 0)
+			self.Castbar:SetPoint('CENTER', oUF.units.player, 'CENTER', 0, -90)
 		end
 		
 		--resting while in city
@@ -346,31 +434,9 @@ local function layout(self, unit)
 		
 	end
 
-	local unitnames = self.Health:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmallLeft')
-	if unit == 'target' or unit == 'player' then
-		self:Tag(unitnames,'[c_unitname]')
-	else
-		self:Tag(unitnames,'[name]')
-	end
-	
-	local unitinfo = self.Health:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmallLeft')
-	self:Tag(unitinfo,'[c_unitinfo]')
-
-	if unit == 'player' or unit == 'target' then
-		unitinfo:SetJustifyH("LEFT")
-		unitinfo:SetPoint('RIGHT', self, -3, 3)
-		unitnames:SetPoint('LEFT', self, 3, 3)
-		
-		self.RaidIcon = self.Health:CreateTexture(nil, 'OVERLAY')
-		self.RaidIcon:SetHeight(16)
-		self.RaidIcon:SetWidth(16)
-		self.RaidIcon:SetPoint('TOP', self, 0, 10)
-		self.RaidIcon:SetTexture'Interface\\TargetingFrame\\UI-RaidTargetingIcons'
-	end
-		
 	if unit == 'target' then
-		self.Castbar:SetPoint('CENTER', oUF.units.target, 'CENTER', 0, -80)
 		self.Castbar:SetStatusBarColor(0.80, 0.01, 0)
+		self.Castbar:SetPoint('CENTER', oUF.units.target, 'CENTER', 0, -90)
 		
 		--pvp icon
 		self.PvP = self.Health:CreateTexture(nil, "OVERLAY")
@@ -462,41 +528,26 @@ local function layout(self, unit)
 
 	end
 	
-	if PlayerClass == "DEATHKNIGHT" then
-		if unit == 'player' then
-			self.Runes = CreateFrame("Frame", nil, self)
-			for i = 1, 6 do
-				self.Runes[i] = CreateFrame('StatusBar', nil, self)
-
-				if (i > 1) then
-					self.Runes[i]:SetPoint('TOPLEFT', self.Runes[i-1], 'TOPRIGHT', 1, 0)
-				else
-					self.Runes[i]:SetPoint('TOPLEFT', self, 'BOTTOMLEFT', -1, -25)
-				end
-
-				self.Runes[i]:SetStatusBarTexture(bartexture)
-				self.Runes[i]:SetStatusBarColor(1, 0.8, 0)
-				self.Runes[i]:SetHeight(6)
-				self.Runes[i]:SetWidth(248 / 6)
-				
-				self.Runes[i].bg = self.Runes[i]:CreateTexture(nil, "BORDER")
-				self.Runes[i].bg:SetTexture(bartexture)
-				self.Runes[i].bg:SetPoint("TOPLEFT", self.Runes[i], "TOPLEFT", -1, 1)
-				self.Runes[i].bg:SetPoint("BOTTOMRIGHT", self.Runes[i], "BOTTOMRIGHT", 1, -1)
-				self.Runes[i].bg.multiplier = 0.3
-			end
-			if showPlayerCastBar then
-				self.Castbar:SetPoint('CENTER', oUF.units.player, 'CENTER', 0, -110)
-				self.Castbar:SetStatusBarColor(1, 0.50, 0)
-			end
-		elseif unit == 'pet' then
-			petAdjust = -10
-		end
-	end
-		
-	--plugins
+	--plugins and additonal bars
+	RuneBar(self, unit)
+	TotemBar(self, unit)
 	SmoothUpdate(self)
+
+	--do positional updates based on bars and pet frame
+	if unit == 'player' and showPlayerCastBar then
+
+		if petAdjust ~= 0 then
+			self.Castbar:SetPoint('CENTER', oUF.units.player, 'CENTER', 0, -90)
+		end
 		
+		-- self.Castbar:SetPoint('CENTER', oUF.units.player, 'CENTER', 0, -90)
+		-- self.Castbar:SetStatusBarColor(1, 0.50, 0)
+		
+			-- fr.Castbar.PostCastStart = myPostCastStart
+			-- fr.Castbar.PostChannelStart = myPostChannelStart
+			
+	end
+	
 end
 
 oUF:RegisterStyle('oUF_Anubis', layout)
