@@ -11,6 +11,7 @@ local showPlayerCastBar = true
 local showTargetBuffs = true
 local maxNumTargetBuffs = 10
 local playerCastBarAdjust = -70
+local spellRangeAlpha = 0.6
 
 oUF.colors.power = {
 	["MANA"] = {26/255, 139/255, 255/255 },
@@ -263,7 +264,7 @@ local SpellRange = function(self, unit)
 		if unit ~= 'player' then
 			self.SpellRange = {
 			insideAlpha = 1,
-			outsideAlpha = 0.7
+			outsideAlpha = spellRangeAlpha
 			}
 		end
 	end
