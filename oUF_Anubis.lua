@@ -95,7 +95,16 @@ local function UpdateDruidPower(self)
 		bar:SetAlpha(0)
 	end
 end
-	
+
+local function UpdateMasterLooter(self)
+	self.MasterLooter:ClearAllPoints()
+	if((UnitInParty(self.unit) or UnitInRaid(self.unit)) and UnitIsPartyLeader(self.unit)) then
+		self.MasterLooter:SetPoint('LEFT', self.Leader, 'RIGHT')
+	else
+		self.MasterLooter:SetPoint("CENTER", self, "TOPLEFT", 20, 3)
+	end
+end
+
 oUF.TagEvents['shortcurhp'] = 'UNIT_HEALTH'
 oUF.Tags['shortcurhp'] = function(u) return shorthpval(UnitHealth(u)) end
 
@@ -515,6 +524,15 @@ local function layout(self, unit)
 		self.Leader:SetWidth(15)
 		self.Leader:SetPoint("CENTER", self, "TOPLEFT", 20, 3)
 		self.Leader:SetTexture('Interface\\GroupFrame\\UI-Group-LeaderIcon')
+		
+		--master looter
+		self.MasterLooter = self.Health:CreateTexture(nil, 'OVERLAY')
+		self.MasterLooter:SetPoint('LEFT', self.Leader, 'RIGHT')
+		self.MasterLooter:SetHeight(12)
+		self.MasterLooter:SetWidth(12)
+		self:RegisterEvent('PARTY_LOOT_METHOD_CHANGED', UpdateMasterLooter)
+		self:RegisterEvent('PARTY_MEMBERS_CHANGED', UpdateMasterLooter)
+		self:RegisterEvent('PARTY_LEADER_CHANGED', UpdateMasterLooter)
 		
 		--pvp icon
 		self.PvP = self.Health:CreateTexture(nil, "OVERLAY")
