@@ -74,6 +74,28 @@ local function shorthpval(value)
 	end
 end
 
+local function UpdateDruidPower(self)
+	local bar = self.DruidPower
+	local num, str = UnitPowerType('player')
+	local min = UnitPower('player', (num ~= 0) and 0 or 3)
+	local max = UnitPowerMax('player', (num ~= 0) and 0 or 3)
+
+	bar:SetMinMaxValues(0, max)
+
+	if(min ~= max) then
+		bar:SetValue(min)
+		bar:SetAlpha(1)
+
+		if(num ~= 0) then
+			bar:SetStatusBarColor(unpack(oUF.colors.power['MANA']))
+		else
+			bar:SetStatusBarColor(unpack(oUF.colors.power['ENERGY']))
+		end
+	else
+		bar:SetAlpha(0)
+	end
+end
+	
 oUF.TagEvents['shortcurhp'] = 'UNIT_HEALTH'
 oUF.Tags['shortcurhp'] = function(u) return shorthpval(UnitHealth(u)) end
 
@@ -165,6 +187,8 @@ local SmoothUpdate = function(self)
 		self.Health.Smooth = true
 		if self.Power then self.Power.Smooth = true end
 		if self.Castbar then self:SmoothBar(self.Castbar) end
+		if self.DruidPower then self:SmoothBar(self.DruidPower) end
+		if self.HealCommBar then self:SmoothBar(self.HealCommBar) end
 		if self.CPoints then
 			for i = 1, MAX_COMBO_POINTS do
 				self:SmoothBar(self.CPoints[i])
@@ -241,7 +265,7 @@ local HealComm4 = function(self)
 		self.HealCommBar = CreateFrame('StatusBar', nil, self.Health)
 		self.HealCommBar:SetHeight(15)
 		self.HealCommBar:SetWidth(self.Health:GetWidth())
-		self.HealCommBar:SetStatusBarTexture(self.Health:GetStatusBarTexture():GetTexture())
+		self.HealCommBar:SetStatusBarTexture(bartexture)
 		self.HealCommBar:SetStatusBarColor(0, 0.8, 0, 0.5)
 		self.HealCommBar:SetPoint('LEFT', self.Health, 'LEFT')
 		self.allowHealCommOverflow = false
@@ -267,6 +291,30 @@ local SpellRange = function(self, unit)
 			outsideAlpha = spellRangeAlpha
 			}
 		end
+	end
+end
+
+local DruidBar = function(self, unit)
+	if (unit == 'player' and PlayerClass == "DRUID") then
+		self.DruidPower = CreateFrame('StatusBar', nil, self)
+		self.DruidPower:SetPoint("TOPRIGHT", self.Health, 0, 20)
+		self.DruidPower:SetStatusBarTexture(bartexture)
+		self.DruidPower:SetHeight(5)
+		self.DruidPower:SetWidth(90)
+		self.DruidPower:SetAlpha(0)
+
+		self.DruidPower.bg = self.DruidPower:CreateTexture(nil, "BORDER")
+		self.DruidPower.bg:SetTexture(bartexture)
+		self.DruidPower.bg:SetPoint("TOPLEFT", self.DruidPower, "TOPLEFT", -1, 1)
+		self.DruidPower.bg:SetPoint("BOTTOMRIGHT", self.DruidPower, "BOTTOMRIGHT", 1, -1)
+		self.DruidPower.bg:SetAlpha(0.3)
+		self.DruidPower.bg:SetVertexColor(0, 0, 0, 0.3)
+		self.DruidPower.bg.multiplier = 0.3
+
+		self:RegisterEvent('UNIT_MANA', UpdateDruidPower)
+		self:RegisterEvent('UNIT_ENERGY', UpdateDruidPower)
+		self:RegisterEvent('PLAYER_LOGIN', UpdateDruidPower)
+		self:RegisterEvent("UPDATE_SHAPESHIFT_FORM", UpdateDruidPower)
 	end
 end
 
@@ -512,6 +560,15 @@ local function layout(self, unit)
 			self.CPoints[i]:SetStatusBarColor(1, 0.8, 0)
 			self.CPoints[i]:SetHeight(6)
 			self.CPoints[i]:SetWidth(250 / MAX_COMBO_POINTS)
+			
+			self.CPoints[i].bg = self.CPoints[i]:CreateTexture(nil, "BORDER") 
+			self.CPoints[i].bg:SetTexture(bartexture)
+			self.CPoints[i].bg:SetPoint("TOPLEFT", self.CPoints[i], "TOPLEFT", -1, 1)
+			self.CPoints[i].bg:SetPoint("BOTTOMRIGHT", self.CPoints[i], "BOTTOMRIGHT", 1, -1)
+			self.CPoints[i].bg:SetAlpha(0.3)
+			self.CPoints[i].bg:SetVertexColor(0, 0, 0, 0.3)
+			self.CPoints[i].bg.multiplier = 0.3
+				
 		end
 
 		self.CPoints.unit = PlayerFrame.unit
@@ -569,12 +626,13 @@ local function layout(self, unit)
 		self.Power.bg:SetAlpha(0.3)
 
 	end
-	
+
 	--plugins and additonal bars
 	RuneBar(self, unit)
 	TotemBar(self, unit)
-	SmoothUpdate(self)
+	DruidBar(self, unit)
 	HealComm4(self)
+	SmoothUpdate(self) --make sure to put this after all bars have been made, check for plugin bars
 	CombatFeed(self, unit)
 	SpellRange(self, unit)
 	
