@@ -1,4 +1,4 @@
---special thanks to the creators of oUF_zp, oUF_lily, and oUF_Lumen
+--special thanks to the creators of oUF_zp (thatguyzp), oUF_lily (Haste), and oUF_Lumen (neverg), lyn and p3lim's work.
 
 local bartexture = 'Interface\\AddOns\\oUF_Anubis\\texture\\statusbar'
 local bufftexture = 'Interface\\AddOns\\oUF_Anubis\\texture\\buff'
@@ -10,7 +10,7 @@ local showPortait = true
 local showPlayerCastBar = true
 local showTargetBuffs = true
 local maxNumTargetBuffs = 10
-local playerCastBarAdjust = -60
+local playerCastBarAdjust = -70
 
 oUF.colors.power = {
 	["MANA"] = {26/255, 139/255, 255/255 },
@@ -114,6 +114,7 @@ oUF.Tags["c_unitinfo"] = function(unit)
 	return str
 end
 
+oUF.TagEvents["c_unitname"] = "UNIT_LEVEL PLAYER_LEVEL_UP UNIT_NAME_UPDATE"
 oUF.Tags["c_unitname"] = function(unit)
 
 	local level = UnitLevel(unit)
@@ -183,7 +184,6 @@ local TotemBar = function(self, unit)
 			for i = 1, 4 do 
 				self.TotemBar[i] = CreateFrame("StatusBar", nil, self) 
 				self.TotemBar[i]:SetHeight(6) 
-				--self.TotemBar[i]:SetWidth(248/4 - 0.85)
 				self.TotemBar[i]:SetWidth(248/4)
 				
 				if (i > 1) then
@@ -245,6 +245,27 @@ local HealComm4 = function(self)
 		self.HealCommBar:SetPoint('LEFT', self.Health, 'LEFT')
 		self.allowHealCommOverflow = false
 		self.HealCommOthersOnly = false
+	end
+end
+
+local CombatFeed = function(self, unit)	
+	if IsAddOnLoaded("oUF_CombatFeedback") then
+		if unit == 'player' or unit == 'target' or unit == 'focus' then
+			self.CombatFeedbackText = self.Health:CreateFontString(nil, "OVERLAY")
+			self.CombatFeedbackText:SetPoint("CENTER", self, "CENTER", 0, (unit ~= 'focus' and 3) or 0)
+			self.CombatFeedbackText:SetFontObject(GameFontNormal)
+		end
+	end
+end
+
+local SpellRange = function(self, unit)
+	if IsAddOnLoaded("oUF_SpellRange") then
+		if unit ~= 'player' then
+			self.SpellRange = {
+			insideAlpha = 1,
+			outsideAlpha = 0.7
+			}
+		end
 	end
 end
 
@@ -339,15 +360,15 @@ local function layout(self, unit)
 				health:SetValue(0)
 				if(not UnitIsConnected(unit) and unit == 'target') then
 					health.hTag:SetText(0)
-					health.pTag:SetText("offline")
+					health.pTag:SetText("Offline")
 					health.pTag:SetTextColor(.8,.8,.8)
 				elseif(UnitIsGhost(unit) and unit == "target") then
 					health.hTag:SetText(0)
-					health.pTag:SetText("ghost")
+					health.pTag:SetText("Ghost")
 					health.pTag:SetTextColor(.8,.8,.8)
 				elseif(UnitIsDead(unit) and unit == "target") then
 					health.hTag:SetText(0)
-					health.pTag:SetText("dead")
+					health.pTag:SetText("Dead")
 					health.pTag:SetTextColor(.7,.7,.7)
 				end
 			end
@@ -369,7 +390,7 @@ local function layout(self, unit)
 			self.Castbar = CreateFrame('StatusBar', nil, self)
 			self.Castbar:SetBackdrop({bgFile = 'Interface\ChatFrame\ChatFrameBackground', insets = {top = -3, left = -3, bottom = -3, right = -3}})
 			self.Castbar:SetBackdropColor(0, 0, 0)
-			self.Castbar:SetWidth(254)
+			self.Castbar:SetWidth(234)
 			self.Castbar:SetHeight(10)
 			self.Castbar:SetStatusBarTexture(bartexture)
 		
@@ -424,7 +445,7 @@ local function layout(self, unit)
 	if unit == 'player' then
 		if self.Castbar and showPlayerCastBar then
 			self.Castbar:SetStatusBarColor(1, 0.50, 0)
-			self.Castbar:SetPoint('CENTER', oUF.units.player, 'CENTER', 0, playerCastBarAdjust)
+			self.Castbar:SetPoint('CENTER', oUF.units.player, 'CENTER', 16, playerCastBarAdjust)
 		end
 		
 		--resting while in city
@@ -456,7 +477,7 @@ local function layout(self, unit)
 
 	if unit == 'target' then
 		self.Castbar:SetStatusBarColor(0.80, 0.01, 0)
-		self.Castbar:SetPoint('CENTER', oUF.units.target, 'CENTER', 0, playerCastBarAdjust + -35)
+		self.Castbar:SetPoint('CENTER', oUF.units.target, 'CENTER', 11, playerCastBarAdjust + -35)
 		
 		--pvp icon
 		self.PvP = self.Health:CreateTexture(nil, "OVERLAY")
@@ -553,13 +574,15 @@ local function layout(self, unit)
 	TotemBar(self, unit)
 	SmoothUpdate(self)
 	HealComm4(self)
-
+	CombatFeed(self, unit)
+	SpellRange(self, unit)
+	
 	--do positional updates based on bars and pet frame
 	if unit == 'player' and showPlayerCastBar then
 	
 		if petAdjust ~= 0 then
 			self.Castbar.adjust = playerCastBarAdjust + petAdjust
-			self.Castbar:SetPoint('CENTER', oUF.units.player, 'CENTER', 0, playerCastBarAdjust + petAdjust)
+			self.Castbar:SetPoint('CENTER', oUF.units.player, 'CENTER', 11, playerCastBarAdjust + petAdjust)
 		else
 			self.Castbar.adjust = playerCastBarAdjust
 		end
@@ -567,9 +590,9 @@ local function layout(self, unit)
 		local swapPosition = function(Castbar, unit, name, rank, text, castid)
 			if unit == 'player' then
 				if oUF.units.pet and oUF.units.pet:IsVisible() then
-					self.Castbar:SetPoint('CENTER', oUF.units.player, 'CENTER', 0, Castbar.adjust + -40)
+					self.Castbar:SetPoint('CENTER', oUF.units.player, 'CENTER', 11, Castbar.adjust + -40)
 				else
-					self.Castbar:SetPoint('CENTER', oUF.units.player, 'CENTER', 0, Castbar.adjust)
+					self.Castbar:SetPoint('CENTER', oUF.units.player, 'CENTER', 11, Castbar.adjust)
 				end
 			end
 		end
