@@ -6,7 +6,10 @@ local _, PlayerClass = UnitClass("player")
 local pluginBarAdjust = 0 --don't touch
 
 --Settings
-local showPortait = true
+local enablePartyFrames = true
+local showPlayerPortait = true
+local showTargetPortait = true
+local showPartyPortait = true
 local showPlayerCastBar = false
 local showTargetCastBar = true
 local showTargetBuffs = true
@@ -50,6 +53,10 @@ oUF.colors.runes = {{0.77, 0.12, 0.23};{0.70, 0.85, 0.20};{0.14, 0.50, 1};{.70, 
 local menu = function(self)
 	local unit = self.unit:sub(1, -2)
 	local cunit = self.unit:gsub('(.)', string.upper, 1)
+
+	if (cunit == "Vehicle") then
+		cunit = "Pet"
+	end
 
 	if(unit == 'party' or unit == 'partypet') then
 		ToggleDropDownMenu(1, nil, _G['PartyMemberFrame'..self.id..'DropDown'], 'cursor', 0, 0)
@@ -164,13 +171,20 @@ oUF.Tags["c_unitname"] = function(unit)
 	end
 		
 	if not UnitIsConnected(unit) then
-		str = "??"
+		str = name
 	else
 		str = string.format("|cff%02x%02x%02x%s|r %s", lvlc.r*255, lvlc.g*255, lvlc.b*255, level, name)
 	end
 	
 	return str
 end
+
+oUF.Tags["afkdnd"] = function(unit)
+	if unit then
+		return not UnitIsConnected(unit) and "" or UnitIsAFK(unit) and " |cffffffff[AFK]|r " or UnitIsDND(unit) and " |cffffffff[DND]|r "
+	end
+end
+oUF.TagEvents["afkdnd"] = "PLAYER_FLAGS_CHANGED"
 
 local auraIcon = function(self, button, icons)
 	icons.showDebuffType = true
@@ -336,6 +350,9 @@ end
 local function layout(self, unit)
 	pluginBarAdjust = 0
 
+	local unitIsParty = self:GetParent():GetName():match("oUF_Party")
+	local unitIsPartyPet = unit and unit:find('partypet%d')
+	
 	self.menu = menu
 	self:RegisterForClicks('AnyUp')
 	self:SetScript('OnEnter', UnitFrame_OnEnter)
@@ -375,6 +392,8 @@ local function layout(self, unit)
 	
 	local unitnames = self.Health:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmallLeft')
 	if unit == 'target' or unit == 'player' then
+		self:Tag(unitnames,'[c_unitname][afkdnd]')
+	elseif unitIsParty then
 		self:Tag(unitnames,'[c_unitname]')
 	else
 		self:Tag(unitnames,'[name]')
@@ -383,6 +402,7 @@ local function layout(self, unit)
 	local unitinfo = self.Health:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmallLeft')
 	self:Tag(unitinfo,'[c_unitinfo]')
 
+	--player and target
 	if unit == 'player' or unit == 'target' then
 		self:SetAttribute('initial-height', 20)
 	    self:SetAttribute('initial-width', 250)
@@ -417,19 +437,21 @@ local function layout(self, unit)
 		self.Health.PostUpdate = function(health, unit, min, max)
 			if (not UnitIsConnected(unit)) or UnitIsDead(unit) or UnitIsGhost(unit) then
 				health:SetValue(0)
-				if(not UnitIsConnected(unit) and unit == 'target') then
+				if(not UnitIsConnected(unit)) then
 					health.hTag:SetText(0)
 					health.pTag:SetText("Offline")
 					health.pTag:SetTextColor(.8,.8,.8)
-				elseif(UnitIsGhost(unit) and unit == "target") then
+				elseif(UnitIsGhost(unit)) then
 					health.hTag:SetText(0)
 					health.pTag:SetText("Ghost")
 					health.pTag:SetTextColor(.8,.8,.8)
-				elseif(UnitIsDead(unit) and unit == "target") then
+				elseif(UnitIsDead(unit)) then
 					health.hTag:SetText(0)
 					health.pTag:SetText("Dead")
 					health.pTag:SetTextColor(.7,.7,.7)
 				end
+			else
+				health.pTag:SetTextColor(1,1,1)
 			end
 		end
 		
@@ -473,14 +495,14 @@ local function layout(self, unit)
 			self.Castbar.Icon:SetPoint("LEFT", self.Castbar, -19, 0)
 		end
 		
-		if showPortait then
+		if (unit == 'player' and showPlayerPortait) or (unit == 'target' and showTargetPortait) then
 			self.Portrait = CreateFrame('PlayerModel', nil, self)
-			self.Portrait:SetWidth(40)
-			self.Portrait:SetHeight(40)
+			self.Portrait:SetWidth(41)
+			self.Portrait:SetHeight(41)
 			if unit == 'target' then
-			  self.Portrait:SetPoint("TOPLEFT", self, "TOPRIGHT", 5, 0)
+			  self.Portrait:SetPoint("TOPLEFT", self, "TOPRIGHT", 5, 1)
 			else
-			  self.Portrait:SetPoint("TOPRIGHT", self, "TOPLEFT", -5, 0)
+			  self.Portrait:SetPoint("TOPRIGHT", self, "TOPLEFT", -5, 1)
 			end
 			self.Portrait.bg = self.Portrait:CreateTexture(nil, "BORDER")
 			self.Portrait.bg:SetTexture(bartexture)
@@ -500,7 +522,8 @@ local function layout(self, unit)
 		self.RaidIcon:SetTexture'Interface\\TargetingFrame\\UI-RaidTargetingIcons'
 		
 	end
-
+	
+	--player
 	if unit == 'player' then
 		if self.Castbar and showPlayerCastBar then
 			self.Castbar:SetStatusBarColor(1, 0.50, 0)
@@ -543,6 +566,7 @@ local function layout(self, unit)
 		
 	end
 
+	--target
 	if unit == 'target' then
 		if showTargetCastBar then
 			self.Castbar:SetStatusBarColor(0.80, 0.01, 0)
@@ -616,6 +640,7 @@ local function layout(self, unit)
 	end
 	self.PostCreateAuraIcon = auraIcon
 	
+	--pet
 	if unit == 'pet' then
 		if PlayerClass == "HUNTER" then
 			self.Health.colorReaction = false
@@ -647,6 +672,107 @@ local function layout(self, unit)
 		self.Power.bg:SetAlpha(0.3)
 
 	end
+	
+	--party
+	if enablePartyFrames and unitIsParty then
+		self:SetAttribute('initial-height', 20)
+	    self:SetAttribute('initial-width', 155)
+
+		self.Power = CreateFrame('StatusBar', nil, self)
+		self.Power:SetStatusBarTexture(bartexture)
+		self.Power:SetHeight(5)
+		self.Power:SetPoint('TOP', self.Health, 'BOTTOM', 0, -1.45)
+
+		self.Power:SetParent(self)
+		self.Power:SetPoint('LEFT')
+		self.Power:SetPoint('RIGHT')
+
+		self.Power.colorPower = true
+		self.Power.frequentUpdates = true
+
+		self.Power.bg = self.Power:CreateTexture(nil, 'BORDER')
+		self.Power.bg:SetAllPoints(self.Power)
+		self.Power.bg:SetTexture(bartexture)
+		self.Power.bg:SetAlpha(0.3)
+		
+		if (showPartyPortait) then
+			self.Portrait = CreateFrame('PlayerModel', nil, self)
+			self.Portrait:SetWidth(25)
+			self.Portrait:SetHeight(25)
+			self.Portrait:SetPoint("TOPRIGHT", self, "TOPLEFT", -5, 1)
+
+			self.Portrait.bg = self.Portrait:CreateTexture(nil, "BORDER")
+			self.Portrait.bg:SetTexture(bartexture)
+			self.Portrait.bg:SetPoint("TOPLEFT", self.Portrait, "TOPLEFT", -1, 1)
+			self.Portrait.bg:SetPoint("BOTTOMRIGHT", self.Portrait, "BOTTOMRIGHT", 1, -1)
+			self.Portrait.bg:SetVertexColor(0,0,0,0.5)
+		end
+		
+		local curhealth = self.Health:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmallLeft')
+		curhealth:SetJustifyH("LEFT")
+		curhealth:SetPoint('RIGHT', self, -3, 3)
+		self.Health.hTag = curhealth
+		self:Tag(curhealth,'[shortcurhp]')
+		
+		self.Health.PostUpdate = function(health, unit, min, max)
+			if (not UnitIsConnected(unit)) or UnitIsDead(unit) or UnitIsGhost(unit) then
+				health:SetValue(0)
+				if(not UnitIsConnected(unit)) then
+					health.hTag:SetText("Offline")
+					health.hTag:SetTextColor(.8,.8,.8)
+				elseif(UnitIsGhost(unit)) then
+					health.hTag:SetText(0)
+					health.hTag:SetText("Ghost")
+					health.hTag:SetTextColor(.8,.8,.8)
+				elseif(UnitIsDead(unit)) then
+					health.hTag:SetText("Dead")
+					health.hTag:SetTextColor(.7,.7,.7)
+				end
+			elseif UnitIsAFK(unit) then
+				health.hTag:SetText("AFK")
+				health.hTag:SetTextColor(.8,.8,.8)
+			else
+				health.hTag:SetTextColor(1,1,1)
+			end
+		end
+		
+		unitnames:SetPoint('LEFT', self, 3, 3)
+		
+		self.RaidIcon = self.Health:CreateTexture(nil, 'OVERLAY')
+		self.RaidIcon:SetHeight(16)
+		self.RaidIcon:SetWidth(16)
+		self.RaidIcon:SetPoint('TOP', self, 0, 10)
+		self.RaidIcon:SetTexture'Interface\\TargetingFrame\\UI-RaidTargetingIcons'
+		
+		--incombat indicator
+		self.Combat = self.Health:CreateTexture(nil, "OVERLAY")
+		self.Combat:SetHeight(20)
+		self.Combat:SetWidth(20)
+		self.Combat:SetPoint("CENTER", self, "TOPRIGHT", -20, 3)
+
+		--party leader
+		self.Leader = self.Health:CreateTexture(nil, 'OVERLAY')
+		self.Leader:SetHeight(15)
+		self.Leader:SetWidth(15)
+		self.Leader:SetPoint("CENTER", self, "TOPLEFT", 20, 3)
+		self.Leader:SetTexture('Interface\\GroupFrame\\UI-Group-LeaderIcon')
+		
+		--master looter
+		self.MasterLooter = self.Health:CreateTexture(nil, 'OVERLAY')
+		self.MasterLooter:SetPoint('LEFT', self.Leader, 'RIGHT')
+		self.MasterLooter:SetHeight(12)
+		self.MasterLooter:SetWidth(12)
+		self:RegisterEvent('PARTY_LOOT_METHOD_CHANGED', UpdateMasterLooter)
+		self:RegisterEvent('PARTY_MEMBERS_CHANGED', UpdateMasterLooter)
+		self:RegisterEvent('PARTY_LEADER_CHANGED', UpdateMasterLooter)
+		
+		--pvp icon
+		self.PvP = self.Health:CreateTexture(nil, "OVERLAY")
+		self.PvP:SetHeight(30)
+		self.PvP:SetWidth(30)
+		self.PvP:SetPoint("CENTER", self, "TOPRIGHT", 4, -3)
+		
+	end
 
 	--plugins and additonal bars
 	RuneBar(self, unit)
@@ -672,3 +798,30 @@ oUF:Spawn('focus'):SetPoint('TOPLEFT', oUF.units.player, 0, 30)
 oUF:Spawn('target'):SetPoint('CENTER', 200, -300)
 oUF:Spawn('targettarget'):SetPoint('TOPRIGHT', oUF.units.target, 0, 30)
 oUF:Spawn('pet'):SetPoint('BOTTOMLEFT', oUF.units.player, 0, (tonumber(showPlayerCastBar and -27) or 0) + -70)
+
+-- spawn party frame
+if enablePartyFrames then
+	local party = oUF:SpawnHeader("oUF_Party", nil, "custom [group:raid]hide;[group:party]show;hide", 	
+			'showParty', true,
+			'yOffset', -30)
+	party:SetPoint('TOPLEFT', UIParent, 40, -230)
+
+	local partyToggle = CreateFrame("Frame")
+	partyToggle:RegisterEvent("PLAYER_LOGIN")
+	partyToggle:RegisterEvent("RAID_ROSTER_UPDATE")
+	partyToggle:RegisterEvent("PARTY_LEADER_CHANGED")
+	partyToggle:RegisterEvent("PARTY_MEMBERS_CHANGED")
+	partyToggle:SetScript("OnEvent", function(self)
+		if InCombatLockdown() then
+			self:RegisterEvent("PLAYER_REGEN_ENABLED")
+		else
+			self:UnregisterEvent("PLAYER_REGEN_ENABLED")
+			local numraid = GetNumRaidMembers()
+			if numraid > 1 then
+					party:Hide()
+			else
+					party:Show()
+			end
+		end
+	end)
+end
