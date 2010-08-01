@@ -3,14 +3,16 @@
 local bartexture = 'Interface\\AddOns\\oUF_Anubis\\texture\\statusbar'
 local bufftexture = 'Interface\\AddOns\\oUF_Anubis\\texture\\buff'
 local _, PlayerClass = UnitClass("player")
-local petAdjust = 0 --don't touch
+local pluginBarAdjust = 0 --don't touch
 
 --Settings
 local showPortait = true
 local showPlayerCastBar = true
+local showTargetCastBar = true
 local showTargetBuffs = true
 local maxNumTargetBuffs = 10
-local playerCastBarAdjust = -70
+local playerCastBarPos = -60
+local targetCastBarPos = -100
 local spellRangeAlpha = 0.6
 
 oUF.colors.power = {
@@ -237,7 +239,7 @@ local TotemBar = function(self, unit)
 				self.TotemBar[i].bg.multiplier = 0.25
 			end
 		end
-		petAdjust = -10
+		pluginBarAdjust = -10
 	end
 end
 
@@ -265,7 +267,7 @@ local RuneBar = function(self, unit)
 				self.Runes[i].bg.multiplier = 0.3
 			end
 		end
-		petAdjust = -10
+		pluginBarAdjust = -10
 	end
 end
 
@@ -332,9 +334,8 @@ end
 ---------------
 
 local function layout(self, unit)
-	petAdjust = 0
-	castBarAdjust = 0
-	
+	pluginBarAdjust = 0
+
 	self.menu = menu
 	self:RegisterForClicks('AnyUp')
 	self:SetScript('OnEnter', UnitFrame_OnEnter)
@@ -444,11 +445,11 @@ local function layout(self, unit)
 		curpower.frequentUpdates = 0.1
 		self:Tag(curpower,'[shortcurpp]')
 
-		if (unit == 'player' and showPlayerCastBar) or unit == 'target' then
+		if (unit == 'player' and showPlayerCastBar) or (unit == 'target' and showTargetCastBar) then
 			self.Castbar = CreateFrame('StatusBar', nil, self)
 			self.Castbar:SetBackdrop({bgFile = 'Interface\ChatFrame\ChatFrameBackground', insets = {top = -3, left = -3, bottom = -3, right = -3}})
 			self.Castbar:SetBackdropColor(0, 0, 0)
-			self.Castbar:SetWidth(234)
+			self.Castbar:SetWidth(235)
 			self.Castbar:SetHeight(10)
 			self.Castbar:SetStatusBarTexture(bartexture)
 		
@@ -503,7 +504,7 @@ local function layout(self, unit)
 	if unit == 'player' then
 		if self.Castbar and showPlayerCastBar then
 			self.Castbar:SetStatusBarColor(1, 0.50, 0)
-			self.Castbar:SetPoint('CENTER', oUF.units.player, 'CENTER', 16, playerCastBarAdjust)
+			self.Castbar:SetPoint('CENTER', oUF.units.player, 'CENTER', 11, playerCastBarPos)
 		end
 		
 		--resting while in city
@@ -543,8 +544,10 @@ local function layout(self, unit)
 	end
 
 	if unit == 'target' then
-		self.Castbar:SetStatusBarColor(0.80, 0.01, 0)
-		self.Castbar:SetPoint('CENTER', oUF.units.target, 'CENTER', 11, playerCastBarAdjust + -35)
+		if showTargetCastBar then
+			self.Castbar:SetStatusBarColor(0.80, 0.01, 0)
+			self.Castbar:SetPoint('CENTER', oUF.units.target, 'CENTER', 11, targetCastBarPos)
+		end
 		
 		--pvp icon
 		self.PvP = self.Health:CreateTexture(nil, "OVERLAY")
@@ -654,30 +657,9 @@ local function layout(self, unit)
 	CombatFeed(self, unit)
 	SpellRange(self, unit)
 	
-	--do positional updates based on bars and pet frame
-	if unit == 'player' and showPlayerCastBar then
-	
-		if petAdjust ~= 0 then
-			self.Castbar.adjust = playerCastBarAdjust + petAdjust
-			self.Castbar:SetPoint('CENTER', oUF.units.player, 'CENTER', 11, playerCastBarAdjust + petAdjust)
-		else
-			self.Castbar.adjust = playerCastBarAdjust
-		end
-		
-		local swapPosition = function(Castbar, unit, name, rank, text, castid)
-			if unit == 'player' then
-				if oUF.units.pet and oUF.units.pet:IsVisible() then
-					self.Castbar:SetPoint('CENTER', oUF.units.player, 'CENTER', 11, Castbar.adjust + -40)
-				else
-					self.Castbar:SetPoint('CENTER', oUF.units.player, 'CENTER', 11, Castbar.adjust)
-				end
-			end
-		end
-		
-		-- PostCast Start Function
-		self.Castbar.PostCastStart = swapPosition
-		self.Castbar.PostChannelStart = swapPosition
-
+	--do positional updates based on additional plugin bars
+	if unit == 'player' and showPlayerCastBar and pluginBarAdjust ~= 0 then
+		self.Castbar:SetPoint('CENTER', oUF.units.player, 'CENTER', 11, playerCastBarPos + pluginBarAdjust)
 	end
 	
 end
@@ -689,4 +671,4 @@ oUF:Spawn('player'):SetPoint('CENTER', -200, -300)
 oUF:Spawn('focus'):SetPoint('TOPLEFT', oUF.units.player, 0, 30)
 oUF:Spawn('target'):SetPoint('CENTER', 200, -300)
 oUF:Spawn('targettarget'):SetPoint('TOPRIGHT', oUF.units.target, 0, 30)
-oUF:Spawn('pet'):SetPoint('BOTTOMLEFT', oUF.units.player, 0, -55 + petAdjust)
+oUF:Spawn('pet'):SetPoint('BOTTOMLEFT', oUF.units.player, 0, -97)
