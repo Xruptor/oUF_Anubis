@@ -7,7 +7,7 @@ local pluginBarAdjust = 0 --don't touch
 
 --Settings
 local showPortait = true
-local showPlayerCastBar = true
+local showPlayerCastBar = false
 local showTargetCastBar = true
 local showTargetBuffs = true
 local maxNumTargetBuffs = 10
@@ -671,4 +671,4 @@ oUF:Spawn('player'):SetPoint('CENTER', -200, -300)
 oUF:Spawn('focus'):SetPoint('TOPLEFT', oUF.units.player, 0, 30)
 oUF:Spawn('target'):SetPoint('CENTER', 200, -300)
 oUF:Spawn('targettarget'):SetPoint('TOPRIGHT', oUF.units.target, 0, 30)
-oUF:Spawn('pet'):SetPoint('BOTTOMLEFT', oUF.units.player, 0, -97)
+oUF:Spawn('pet'):SetPoint('BOTTOMLEFT', oUF.units.player, 0, (tonumber(showPlayerCastBar and -27) or 0) + -70)
