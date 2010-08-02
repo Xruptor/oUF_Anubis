@@ -224,6 +224,11 @@ local SmoothUpdate = function(self)
 				self:SmoothBar(self.Runes[i])
 			end
 		end
+		if self.TotemBar then
+			for i = 1, 4 do
+				self:SmoothBar(self.TotemBar[i])
+			end
+		end
 	end	
 end
 
