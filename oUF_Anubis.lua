@@ -1,4 +1,5 @@
 --special thanks to the creators of oUF_zp (thatguyzp), oUF_lily (Haste), and oUF_Lumen (neverg), lyn and p3lim's work.
+--a very special thanks to thatguyzp whom without his layout this wouldn't have been possible :)  Thanks again!
 
 local bartexture = 'Interface\\AddOns\\oUF_Anubis\\texture\\statusbar'
 local bufftexture = 'Interface\\AddOns\\oUF_Anubis\\texture\\buff'
@@ -7,6 +8,7 @@ local pluginBarAdjust = 0 --don't touch
 
 --Settings
 local enablePartyFrames = true
+local enablePartyPets = true
 local showPlayerPortait = true
 local showTargetPortait = true
 local showPartyPortait = true
@@ -14,6 +16,7 @@ local showPlayerCastBar = false
 local showTargetCastBar = true
 local showTargetBuffs = true
 local maxNumTargetBuffs = 10
+local maxNumTargetDebuffs = 11
 local playerCastBarPos = -60
 local targetCastBarPos = -100
 local spellRangeAlpha = 0.6
@@ -51,18 +54,22 @@ oUF.colors.smooth = { 1, 0, 0, 1, 1, 0, 1, 1, 1}
 oUF.colors.runes = {{0.77, 0.12, 0.23};{0.70, 0.85, 0.20};{0.14, 0.50, 1};{.70, .21, 0.94};}
 	
 local menu = function(self)
-	local unit = self.unit:sub(1, -2)
+	--local unit = self.unit:sub(1, -2)
 	local cunit = self.unit:gsub('(.)', string.upper, 1)
 
 	if (cunit == "Vehicle") then
 		cunit = "Pet"
 	end
-
-	if(unit == 'party' or unit == 'partypet') then
-		ToggleDropDownMenu(1, nil, _G['PartyMemberFrame'..self.id..'DropDown'], 'cursor', 0, 0)
-	elseif(_G[cunit..'FrameDropDown']) then
-		ToggleDropDownMenu(1, nil, _G[cunit..'FrameDropDown'], 'cursor', 0, 0)
+	
+	if(_G[cunit..'FrameDropDown']) then
+		ToggleDropDownMenu(1, nil, _G[cunit..'FrameDropDown'], 'cursor')
+	elseif(self.unit:match('^party')) then
+		ToggleDropDownMenu(1, nil, _G['PartyMemberFrame'..self.id..'DropDown'], 'cursor')
+	elseif(self.unit:match('^raid')) then
+		self.name = unit
+		RaidGroupButton_ShowMenu(self)
 	end
+	
 end
 
 local function updateCombo(self, event, unit)
@@ -126,11 +133,9 @@ oUF.Tags["c_unitinfo"] = function(unit)
 	local classInfo = UnitClassification(unit)
 	local level = UnitLevel(unit)
 	local lvlc = GetQuestDifficultyColor(level)
-	local race = UnitRace(unit)
-	
-	local cType = UnitCreatureFamily(unit)
-	if (not cType) then cType = '' end
-	
+	local race = UnitRace(unit) or 'Unknown'
+	local cType = UnitCreatureFamily(unit) or ''
+
 	local str = ""
 
 	if classInfo == "worldboss" then
@@ -631,7 +636,7 @@ local function layout(self, unit)
 		self.Debuffs:SetPoint('TOPLEFT', self, 'BOTTOMLEFT', 0, -33)
 		self.Debuffs.initialAnchor = 'TOPLEFT'
 		self.Debuffs['growth-y'] = 'DOWN'
-		self.Debuffs.num = 11
+		self.Debuffs.num = maxNumTargetDebuffs
 		self.Debuffs.spacing = 2
 		
 	end
@@ -676,6 +681,38 @@ local function layout(self, unit)
 		self.Power.bg:SetTexture(bartexture)
 		self.Power.bg:SetAlpha(0.3)
 
+	end
+	
+	--partypet
+	if enablePartyFrames and enablePartyPets and unitIsPartyPet then
+		if PlayerClass == "HUNTER" then
+			self.Health.colorReaction = false
+			self.Health.colorClass = false
+			self.Health.colorHappiness = true
+		end
+		
+	    self:SetAttribute('initial-height', 20)
+	    self:SetAttribute('initial-width', 85)
+		unitnames:SetPoint('LEFT', self, 0, 2)
+		unitnames:SetWidth(90)
+		unitnames:SetHeight(10)
+		
+		self.Power = CreateFrame('StatusBar', nil, self)
+		self.Power:SetStatusBarTexture(bartexture)
+		self.Power:SetHeight(5)
+		self.Power:SetPoint('TOP', self.Health, 'BOTTOM', 0, -1.45)
+
+		self.Power:SetParent(self)
+		self.Power:SetPoint'LEFT'
+		self.Power:SetPoint'RIGHT'
+
+		self.Power.colorPower = true
+		self.Power.frequentUpdates = true
+
+		self.Power.bg = self.Power:CreateTexture(nil, 'BORDER')
+		self.Power.bg:SetAllPoints(self.Power)
+		self.Power.bg:SetTexture(bartexture)
+		self.Power.bg:SetAlpha(0.3)
 	end
 	
 	--party
@@ -777,6 +814,16 @@ local function layout(self, unit)
 		self.PvP:SetWidth(30)
 		self.PvP:SetPoint("CENTER", self, "TOPRIGHT", 4, -3)
 		
+		self.Debuffs = CreateFrame('Frame', nil, self)
+		self.Debuffs.size = 20
+		self.Debuffs:SetHeight(self.Debuffs.size)
+		self.Debuffs:SetWidth(self.Debuffs.size * 15)
+		self.Debuffs:SetPoint('TOPLEFT', self, 'BOTTOMLEFT', 0, -7)
+		self.Debuffs.initialAnchor = 'TOPLEFT'
+		self.Debuffs['growth-y'] = 'DOWN'
+		self.Debuffs.num = 15
+		self.Debuffs.spacing = 2
+		
 	end
 
 	--plugins and additonal bars
@@ -807,8 +854,8 @@ oUF:Spawn('pet'):SetPoint('BOTTOMLEFT', oUF.units.player, 0, (tonumber(showPlaye
 -- spawn party frame
 if enablePartyFrames then
 	local party = oUF:SpawnHeader("oUF_Party", nil, "custom [group:raid]hide;[group:party]show;hide", 	
-			'showParty', true,
-			'yOffset', -30)
+	'showParty', true,
+	'yOffset', -40)
 	party:SetPoint('TOPLEFT', UIParent, 40, -230)
 
 	local partyToggle = CreateFrame("Frame")
@@ -829,4 +876,15 @@ if enablePartyFrames then
 			end
 		end
 	end)
+
+	if enablePartyPets then
+		local pets = {} 
+		pets[1] = oUF:Spawn('partypet1', 'oUF_PartyPet1') 
+		pets[1]:SetPoint('TOPRIGHT', party, 'TOPRIGHT', 100, 0) 
+		for i =2, 4 do 
+			pets[i] = oUF:Spawn('partypet'..i, 'oUF_PartyPet'..i) 
+			pets[i]:SetPoint('TOP', pets[i-1], 'BOTTOM', 0, -40) 
+		end
+	end
 end
+
