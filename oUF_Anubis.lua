@@ -15,10 +15,11 @@ local showPartyPortait = true
 local showPlayerCastBar = false
 local showTargetCastBar = true
 local showTargetBuffs = true
+local showTargetDebuffs = true
 local maxNumTargetBuffs = 10
 local maxNumTargetDebuffs = 11
 local playerCastBarPos = -60
-local targetCastBarPos = -100
+local targetCastBarPos = -110
 local spellRangeAlpha = 0.6
 
 oUF.colors.power = {
@@ -353,6 +354,19 @@ local DruidBar = function(self, unit)
 	end
 end
 
+local PowerSpark = function(self, unit)
+	if IsAddOnLoaded('oUF_PowerSpark') then
+		if (unit == 'player' and self.Power) then
+			self.Spark = self.Power:CreateTexture(nil, 'OVERLAY')
+			self.Spark:SetTexture('Interface\\CastingBar\\UI-CastingBar-Spark')
+			self.Spark:SetBlendMode('ADD')
+			spark:SetHeight(self.Power:GetHeight()*2)
+			spark:SetWidth(self.Power:GetHeight())
+			self.Spark.manatick = true
+		end
+	end
+end
+
 ---------------
 ---LAYOUT
 ---------------
@@ -629,16 +643,17 @@ local function layout(self, unit)
 		self.CPoints.unit = PlayerFrame.unit
 		self:RegisterEvent('UNIT_COMBO_POINTS', updateCombo)
 		
-		self.Debuffs = CreateFrame('Frame', nil, self)
-		self.Debuffs.size = 20
-		self.Debuffs:SetHeight(self.Debuffs.size)
-		self.Debuffs:SetWidth(self.Debuffs.size * 12)
-		self.Debuffs:SetPoint('TOPLEFT', self, 'BOTTOMLEFT', 0, -33)
-		self.Debuffs.initialAnchor = 'TOPLEFT'
-		self.Debuffs['growth-y'] = 'DOWN'
-		self.Debuffs.num = maxNumTargetDebuffs
-		self.Debuffs.spacing = 2
-		
+		if showTargetDebuffs then
+			self.Debuffs = CreateFrame('Frame', nil, self)
+			self.Debuffs.size = 20
+			self.Debuffs:SetHeight(self.Debuffs.size)
+			self.Debuffs:SetWidth(self.Debuffs.size * 12)
+			self.Debuffs:SetPoint('TOPLEFT', self, 'BOTTOMLEFT', 0, -35)
+			self.Debuffs.initialAnchor = 'TOPLEFT'
+			self.Debuffs['growth-y'] = 'DOWN'
+			self.Debuffs.num = maxNumTargetDebuffs
+			self.Debuffs.spacing = 2
+		end
 	end
 	
 	if unit == 'focus' or unit == 'targettarget' then
@@ -827,6 +842,7 @@ local function layout(self, unit)
 	end
 
 	--plugins and additonal bars
+	PowerSpark(self, unit)
 	RuneBar(self, unit)
 	TotemBar(self, unit)
 	DruidBar(self, unit)
