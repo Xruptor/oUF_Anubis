@@ -22,6 +22,7 @@ local playerCastBarPos = -60
 local targetCastBarPos = -110
 local spellRangeAlpha = 0.6
 local partyFramesYOffset = -50
+local partyPetXOffset = 118
 
 oUF.colors.power = {
 	["MANA"] = {26/255, 139/255, 255/255 },
@@ -918,7 +919,7 @@ if enablePartyFrames then
 	if enablePartyPets then
 		local pets = {} 
 		pets[1] = oUF:Spawn('partypet1', 'oUF_PartyPet1') 
-		pets[1]:SetPoint('TOPRIGHT', party, 'TOPRIGHT', 100, 0) 
+		pets[1]:SetPoint('TOPRIGHT', party, 'TOPRIGHT', partyPetXOffset, 0) 
 		for i =2, 4 do 
 			pets[i] = oUF:Spawn('partypet'..i, 'oUF_PartyPet'..i) 
 			pets[i]:SetPoint('TOP', pets[i-1], 'BOTTOM', 0, partyFramesYOffset) 
