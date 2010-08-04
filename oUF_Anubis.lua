@@ -367,6 +367,11 @@ local PowerSpark = function(self, unit)
 	end
 end
 
+-- oUF_Swing
+--Make the bar veritile instead of horizontal
+-- self.Swing:SetOrientation("VERTICAL")
+
+	
 ---------------
 ---LAYOUT
 ---------------
@@ -409,7 +414,7 @@ local function layout(self, unit)
 	self.Health.bg:SetAllPoints(self.Health)
 	self.Health.bg:SetTexture(bartexture)
 	self.Health.bg:SetAlpha(0.3)
-	
+
 	if unit ~= 'player' then
 		self.disallowVehicleSwap = true
 	end
@@ -588,6 +593,14 @@ local function layout(self, unit)
 		self.PvP:SetWidth(30)
 		self.PvP:SetPoint("CENTER", self, "TOPRIGHT", 4, -3)
 		
+		self.LFDRole = self.Health:CreateTexture(nil, "OVERLAY")
+		self.LFDRole:SetHeight(16)
+		self.LFDRole:SetWidth(16)
+		--self.doh:SetPoint('RIGHT', self.Combat, 'LEFT', 0, 2)
+		self.LFDRole:SetPoint("LEFT", self, "RIGHT", 3, -2)
+		self.LFDRole:SetTexture[[Interface\LFGFrame\UI-LFG-ICON-PORTRAITROLES]]
+		self.LFDRole:SetTexCoord(20/64, 39/64, 1/64, 20/64)
+
 	end
 
 	--target
@@ -839,6 +852,14 @@ local function layout(self, unit)
 		self.Debuffs.num = 15
 		self.Debuffs.spacing = 2
 		
+		self.LFDRole = self.Health:CreateTexture(nil, "OVERLAY")
+		self.LFDRole:SetHeight(16)
+		self.LFDRole:SetWidth(16)
+		--self.doh:SetPoint('RIGHT', self.Combat, 'LEFT', 0, 2)
+		self.LFDRole:SetPoint("LEFT", self, "RIGHT", 3, -2)
+		self.LFDRole:SetTexture[[Interface\LFGFrame\UI-LFG-ICON-PORTRAITROLES]]
+		self.LFDRole:SetTexCoord(20/64, 39/64, 1/64, 20/64)
+		
 	end
 
 	--plugins and additonal bars
@@ -871,7 +892,7 @@ oUF:Spawn('pet'):SetPoint('BOTTOMLEFT', oUF.units.player, 0, (tonumber(showPlaye
 if enablePartyFrames then
 	local party = oUF:SpawnHeader("oUF_Party", nil, "custom [group:raid]hide;[group:party]show;hide", 	
 	'showParty', true,
-	'yOffset', -40)
+	'yOffset', -50)
 	party:SetPoint('TOPLEFT', UIParent, 40, -230)
 
 	local partyToggle = CreateFrame("Frame")
@@ -899,7 +920,7 @@ if enablePartyFrames then
 		pets[1]:SetPoint('TOPRIGHT', party, 'TOPRIGHT', 100, 0) 
 		for i =2, 4 do 
 			pets[i] = oUF:Spawn('partypet'..i, 'oUF_PartyPet'..i) 
-			pets[i]:SetPoint('TOP', pets[i-1], 'BOTTOM', 0, -40) 
+			pets[i]:SetPoint('TOP', pets[i-1], 'BOTTOM', 0, -50) 
 		end
 	end
 end
