@@ -230,22 +230,24 @@ local SmoothUpdate = function(self)
 	if IsAddOnLoaded("oUF_Smooth") then
 		self.Health.Smooth = true
 		if self.Power then self.Power.Smooth = true end
-		if self.Castbar then self:SmoothBar(self.Castbar) end
-		if self.DruidPower then self:SmoothBar(self.DruidPower) end
-		if self.HealCommBar then self:SmoothBar(self.HealCommBar) end
-		if self.CPoints then
-			for i = 1, MAX_COMBO_POINTS do
-				self:SmoothBar(self.CPoints[i])
+		if self.SmoothBar then
+			if self.Castbar then self:SmoothBar(self.Castbar) end
+			if self.DruidPower then self:SmoothBar(self.DruidPower) end
+			if self.HealCommBar then self:SmoothBar(self.HealCommBar) end
+			if self.CPoints then
+				for i = 1, MAX_COMBO_POINTS do
+					self:SmoothBar(self.CPoints[i])
+				end
 			end
-		end
-		if self.Runes then
-			for i = 1, 6 do
-				self:SmoothBar(self.Runes[i])
+			if self.Runes then
+				for i = 1, 6 do
+					self:SmoothBar(self.Runes[i])
+				end
 			end
-		end
-		if self.TotemBar then
-			for i = 1, 4 do
-				self:SmoothBar(self.TotemBar[i])
+			if self.TotemBar then
+				for i = 1, 4 do
+					self:SmoothBar(self.TotemBar[i])
+				end
 			end
 		end
 	end	
@@ -883,7 +885,6 @@ local function layout(self, unit)
 	TotemBar(self, unit)
 	DruidBar(self, unit)
 	HealComm4(self)
-	SmoothUpdate(self) --make sure to put this after all bars have been made, check for plugin bars
 	CombatFeed(self, unit)
 	SpellRange(self, unit)
 	
@@ -940,3 +941,18 @@ if enablePartyFrames then
 	end
 end
 
+local f = CreateFrame("frame",nil,UIParent)
+f:SetScript("OnEvent", function(self, event, ...) if self[event] then return self[event](self, event, ...) end end)
+
+function f:PLAYER_LOGIN()
+	for i, frame in ipairs(oUF.objects) do
+		if frame.SmoothBar then
+			--Smooth Update doesn't fully hook until after player login
+			SmoothUpdate(frame)
+		end
+	end
+	self:UnregisterEvent("PLAYER_LOGIN")
+	self.PLAYER_LOGIN = nil
+end
+
+if IsLoggedIn() then f:PLAYER_LOGIN() else f:RegisterEvent("PLAYER_LOGIN") end
