@@ -375,8 +375,8 @@ local PowerSpark = function(self, unit)
 			self.Spark = self.Power:CreateTexture(nil, 'OVERLAY')
 			self.Spark:SetTexture('Interface\\CastingBar\\UI-CastingBar-Spark')
 			self.Spark:SetBlendMode('ADD')
-			spark:SetHeight(self.Power:GetHeight()*2)
-			spark:SetWidth(self.Power:GetHeight())
+			self.Spark:SetHeight(self.Power:GetHeight()*2)
+			self.Spark:SetWidth(self.Power:GetHeight())
 			self.Spark.manatick = true
 		end
 	end
