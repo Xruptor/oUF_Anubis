@@ -21,6 +21,7 @@ local maxNumTargetDebuffs = 11
 local playerCastBarPos = -60
 local targetCastBarPos = -110
 local spellRangeAlpha = 0.6
+local partyFramesYOffset = -50
 
 oUF.colors.power = {
 	["MANA"] = {26/255, 139/255, 255/255 },
@@ -892,7 +893,7 @@ oUF:Spawn('pet'):SetPoint('BOTTOMLEFT', oUF.units.player, 0, (tonumber(showPlaye
 if enablePartyFrames then
 	local party = oUF:SpawnHeader("oUF_Party", nil, "custom [group:raid]hide;[group:party]show;hide", 	
 	'showParty', true,
-	'yOffset', -50)
+	'yOffset', partyFramesYOffset)
 	party:SetPoint('TOPLEFT', UIParent, 40, -230)
 
 	local partyToggle = CreateFrame("Frame")
@@ -920,7 +921,7 @@ if enablePartyFrames then
 		pets[1]:SetPoint('TOPRIGHT', party, 'TOPRIGHT', 100, 0) 
 		for i =2, 4 do 
 			pets[i] = oUF:Spawn('partypet'..i, 'oUF_PartyPet'..i) 
-			pets[i]:SetPoint('TOP', pets[i-1], 'BOTTOM', 0, -50) 
+			pets[i]:SetPoint('TOP', pets[i-1], 'BOTTOM', 0, partyFramesYOffset) 
 		end
 	end
 end
