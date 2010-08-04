@@ -24,6 +24,17 @@ local spellRangeAlpha = 0.6
 local partyFramesYOffset = -50
 local partyPetXOffset = 118
 
+--enable oUF_CombatFeedback on the following frames
+local cfs = {
+	["player"] = true,
+	["target"] = true,
+	["pet"] = false,
+	["focus"] = true,
+	["targettarget"] = false,
+	["party"] = true,
+	["partypets"] = false,
+}
+
 oUF.colors.power = {
 	["MANA"] = {26/255, 139/255, 255/255 },
 	["RAGE"] = {255/255, 26/255, 48/255 },
@@ -313,7 +324,9 @@ end
 
 local CombatFeed = function(self, unit)	
 	if IsAddOnLoaded("oUF_CombatFeedback") then
-		if unit == 'player' or unit == 'target' or unit == 'focus' then
+		local unitIsParty = self:GetParent():GetName():match("oUF_Party")
+		local unitIsPartyPet = unit and unit:find('partypet%d')
+		if cfs[unit] or (unitIsParty and cfs.party) or (unitIsPartyPet and cfs.partypets) then
 			self.CombatFeedbackText = self.Health:CreateFontString(nil, "OVERLAY")
 			self.CombatFeedbackText:SetPoint("CENTER", self, "CENTER", 0, (unit ~= 'focus' and 3) or 0)
 			self.CombatFeedbackText:SetFontObject(GameFontNormal)
