@@ -7,6 +7,8 @@ local _, PlayerClass = UnitClass("player")
 local pluginBarAdjust = 0 --don't touch
 
 --Settings
+local enableShortName = false
+local shortNameLength = 15
 local enablePartyFrames = true
 local enablePartyPets = true
 local showPlayerPortait = true
@@ -90,6 +92,17 @@ local function updateCombo(self, event, unit)
 	if(unit == PlayerFrame.unit and unit ~= self.CPoints.unit) then
 		self.CPoints.unit = unit
 	end
+	--adjust the debuffs depending if the druid is in cat form or not
+	if PlayerClass == "DRUID" then
+		local icon, name, active, castable = GetShapeshiftFormInfo(3)
+		if active and self.Debuffs and not self.Debuffs.moved then
+			self.Debuffs:SetPoint('TOPLEFT', self, 'BOTTOMLEFT', 0, -35)
+			self.Debuffs.moved = true
+		elseif self.Debuffs and self.Debuffs.moved then
+			self.Debuffs:SetPoint('TOPLEFT', self, 'BOTTOMLEFT', 0, -25)
+			self.Debuffs.moved = false
+		end
+	end
 end
 
 local function shorthpval(value)
@@ -132,6 +145,34 @@ local function UpdateMasterLooter(self)
 		self.MasterLooter:SetPoint('LEFT', self.Leader, 'RIGHT')
 	else
 		self.MasterLooter:SetPoint("CENTER", self, "TOPLEFT", 20, 3)
+	end
+end
+
+local shortName = function(str, i, dots)
+	if not str then return end
+	local strLen = str:len()
+	if (strLen <= i) then
+		return str
+	else
+		local len, pos = 0, 1
+		while (pos <= strLen) and (len < i) do
+			local px = str:byte(pos)
+			if (px > 0 and px < 128) then
+				pos = pos + 1
+			elseif (px >= 192 and px < 224) then
+				pos = pos + 2
+			elseif (px >= 224 and px < 240) then
+				pos = pos + 3
+			elseif (px >= 240 and px < 248) then
+				pos = pos + 4
+			end
+			len = len + 1
+		end
+		if (len >= i and pos <= strLen) then
+			return str:sub(1, pos - 1)..(dots and '...' or '')
+		else
+			return str
+		end
 	end
 end
 
@@ -180,6 +221,10 @@ oUF.Tags["c_unitname"] = function(unit)
 	local level = UnitLevel(unit)
 	local lvlc = GetQuestDifficultyColor(level)
 	local name = UnitName(unit) or "Unknown"
+	
+	if enableShortName then
+		name = shortName(name, shortNameLength, unit == 'target' or nil)
+	end
 
 	local str = ""
 
@@ -196,6 +241,15 @@ oUF.Tags["c_unitname"] = function(unit)
 	end
 	
 	return str
+end
+
+oUF.TagEvents["c_shortname"] = "UNIT_NAME_UPDATE"
+oUF.Tags["c_shortname"] = function(unit)
+	local name = UnitName(unit) or "Unknown"
+	if enableShortName then
+		name = shortName(name, shortNameLength, unit == 'target' or nil)
+	end
+	return name
 end
 
 oUF.Tags["afkdnd"] = function(unit)
@@ -442,7 +496,7 @@ local function layout(self, unit)
 	elseif unitIsParty then
 		self:Tag(unitnames,'[c_unitname]')
 	else
-		self:Tag(unitnames,'[name]')
+		self:Tag(unitnames,'[c_shortname]')
 	end
 	
 	local unitinfo = self.Health:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmallLeft')
@@ -451,7 +505,7 @@ local function layout(self, unit)
 	--player and target
 	if unit == 'player' or unit == 'target' then
 		self:SetAttribute('initial-height', 20)
-	    self:SetAttribute('initial-width', 250)
+		self:SetAttribute('initial-width', 250)
 
 		self.Power = CreateFrame('StatusBar', nil, self)
 		self.Power:SetStatusBarTexture(bartexture)
@@ -546,9 +600,9 @@ local function layout(self, unit)
 			self.Portrait:SetWidth(41)
 			self.Portrait:SetHeight(41)
 			if unit == 'target' then
-			  self.Portrait:SetPoint("TOPLEFT", self, "TOPRIGHT", 5, 1)
+				self.Portrait:SetPoint("TOPLEFT", self, "TOPRIGHT", 5, 1)
 			else
-			  self.Portrait:SetPoint("TOPRIGHT", self, "TOPLEFT", -5, 1)
+				self.Portrait:SetPoint("TOPRIGHT", self, "TOPLEFT", -5, 1)
 			end
 			self.Portrait.bg = self.Portrait:CreateTexture(nil, "BORDER")
 			self.Portrait.bg:SetTexture(bartexture)
@@ -645,40 +699,49 @@ local function layout(self, unit)
 			self.Buffs.spacing = 2
 		end
 
-		self.CPoints = {}
-		for i = 1, MAX_COMBO_POINTS do
-			self.CPoints[i] = CreateFrame('StatusBar', nil, self)
+		if PlayerClass == "ROGUE" or PlayerClass == "DRUID" then
+			self.CPoints = {}
+			for i = 1, MAX_COMBO_POINTS do
+				self.CPoints[i] = CreateFrame('StatusBar', nil, self)
 
-			if (i > 1) then
-				self.CPoints[i]:SetPoint('TOPLEFT', self.CPoints[i-1], 'TOPRIGHT', 1, 0)
-			else
-				self.CPoints[i]:SetPoint('TOPLEFT', self, 'BOTTOMLEFT', -1, -25)
+				if (i > 1) then
+					self.CPoints[i]:SetPoint('TOPLEFT', self.CPoints[i-1], 'TOPRIGHT', 1, 0)
+				else
+					self.CPoints[i]:SetPoint('TOPLEFT', self, 'BOTTOMLEFT', -1, -25)
+				end
+
+				self.CPoints[i]:SetStatusBarTexture(bartexture)
+				self.CPoints[i]:SetStatusBarColor(1, 0.8, 0)
+				self.CPoints[i]:SetHeight(6)
+				self.CPoints[i]:SetWidth(250 / MAX_COMBO_POINTS)
+				
+				self.CPoints[i].bg = self.CPoints[i]:CreateTexture(nil, "BORDER") 
+				self.CPoints[i].bg:SetTexture(bartexture)
+				self.CPoints[i].bg:SetPoint("TOPLEFT", self.CPoints[i], "TOPLEFT", -1, 1)
+				self.CPoints[i].bg:SetPoint("BOTTOMRIGHT", self.CPoints[i], "BOTTOMRIGHT", 1, -1)
+				self.CPoints[i].bg:SetAlpha(0.3)
+				self.CPoints[i].bg:SetVertexColor(0, 0, 0, 0.3)
+				self.CPoints[i].bg.multiplier = 0.3
+					
 			end
 
-			self.CPoints[i]:SetStatusBarTexture(bartexture)
-			self.CPoints[i]:SetStatusBarColor(1, 0.8, 0)
-			self.CPoints[i]:SetHeight(6)
-			self.CPoints[i]:SetWidth(250 / MAX_COMBO_POINTS)
-			
-			self.CPoints[i].bg = self.CPoints[i]:CreateTexture(nil, "BORDER") 
-			self.CPoints[i].bg:SetTexture(bartexture)
-			self.CPoints[i].bg:SetPoint("TOPLEFT", self.CPoints[i], "TOPLEFT", -1, 1)
-			self.CPoints[i].bg:SetPoint("BOTTOMRIGHT", self.CPoints[i], "BOTTOMRIGHT", 1, -1)
-			self.CPoints[i].bg:SetAlpha(0.3)
-			self.CPoints[i].bg:SetVertexColor(0, 0, 0, 0.3)
-			self.CPoints[i].bg.multiplier = 0.3
-				
+			self.CPoints.unit = PlayerFrame.unit
+			self:RegisterEvent('UNIT_COMBO_POINTS', updateCombo)
 		end
-
-		self.CPoints.unit = PlayerFrame.unit
-		self:RegisterEvent('UNIT_COMBO_POINTS', updateCombo)
 		
 		if showTargetDebuffs then
 			self.Debuffs = CreateFrame('Frame', nil, self)
 			self.Debuffs.size = 20
 			self.Debuffs:SetHeight(self.Debuffs.size)
 			self.Debuffs:SetWidth(self.Debuffs.size * 12)
-			self.Debuffs:SetPoint('TOPLEFT', self, 'BOTTOMLEFT', 0, -35)
+			--move the debuffs if we are playing a rogue/druid
+			if self.CPoints then
+				self.Debuffs:SetPoint('TOPLEFT', self, 'BOTTOMLEFT', 0, -35)
+				self.Debuffs.moved = true
+			else
+				self.Debuffs:SetPoint('TOPLEFT', self, 'BOTTOMLEFT', 0, -25)
+				self.Debuffs.moved = false
+			end
 			self.Debuffs.initialAnchor = 'TOPLEFT'
 			self.Debuffs['growth-y'] = 'DOWN'
 			self.Debuffs.num = maxNumTargetDebuffs
@@ -687,8 +750,8 @@ local function layout(self, unit)
 	end
 	
 	if unit == 'focus' or unit == 'targettarget' then
-	    self:SetAttribute('initial-height', 12)
-	    self:SetAttribute('initial-width', 100)
+		self:SetAttribute('initial-height', 12)
+		self:SetAttribute('initial-width', 100)
 		unitnames:SetPoint('LEFT', self, 0, 0)
 		unitnames:SetWidth(90)
 		unitnames:SetHeight(10)
@@ -703,8 +766,8 @@ local function layout(self, unit)
 			self.Health.colorHappiness = true
 		end
 		
-	    self:SetAttribute('initial-height', 19)
-	    self:SetAttribute('initial-width', 100)
+		self:SetAttribute('initial-height', 19)
+		self:SetAttribute('initial-width', 100)
 		unitnames:SetPoint('LEFT', self, 0, 2)
 		unitnames:SetWidth(90)
 		unitnames:SetHeight(10)
@@ -736,8 +799,8 @@ local function layout(self, unit)
 			self.Health.colorHappiness = true
 		end
 		
-	    self:SetAttribute('initial-height', 20)
-	    self:SetAttribute('initial-width', 85)
+		self:SetAttribute('initial-height', 20)
+		self:SetAttribute('initial-width', 85)
 		unitnames:SetPoint('LEFT', self, 0, 2)
 		unitnames:SetWidth(90)
 		unitnames:SetHeight(10)
@@ -763,7 +826,7 @@ local function layout(self, unit)
 	--party
 	if enablePartyFrames and unitIsParty then
 		self:SetAttribute('initial-height', 20)
-	    self:SetAttribute('initial-width', 155)
+		self:SetAttribute('initial-width', 155)
 
 		self.Power = CreateFrame('StatusBar', nil, self)
 		self.Power:SetStatusBarTexture(bartexture)
