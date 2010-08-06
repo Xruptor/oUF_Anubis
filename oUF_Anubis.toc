@@ -3,6 +3,7 @@
 ## Notes: A relatively simplistic oUF layout
 ## Author: Xruptor
 ## Version: 1.4
+## SavedVariables: AnubisDB
 ## RequiredDeps: oUF
 ## OptionalDeps: oUF_PowerSpark, oUF_MovableFrames, oUF_TotemBar, oUF_Smooth, oUF_HealComm4, oUF_CombatFeedback, oUF_SpellRange
 

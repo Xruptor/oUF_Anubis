@@ -1,12 +1,19 @@
 --special thanks to the creators of oUF_zp (thatguyzp), oUF_lily (Haste), and oUF_Lumen (neverg), lyn and p3lim's work.
 --a very special thanks to thatguyzp whom without his layout this wouldn't have been possible :)  Thanks again!
 
+local f = CreateFrame("frame",nil,UIParent)
+f:SetScript("OnEvent", function(self, event, ...) if self[event] then return self[event](self, event, ...) end end)
+
 local bartexture = 'Interface\\AddOns\\oUF_Anubis\\texture\\statusbar'
 local bufftexture = 'Interface\\AddOns\\oUF_Anubis\\texture\\buff'
 local _, PlayerClass = UnitClass("player")
 local pluginBarAdjust = 0 --don't touch
 
 --Settings
+--I'm NOT responsible for anything that gets broken visually if you edit these settings.
+--If you are compelled to edit these settings, then do so at your own risk.  I WILL NOT PROVIDE ASSISTANCE!!!
+local setScaleVal = 1
+local playerTargetWidth = 220
 local enableShortName = false
 local shortNameLength = 15
 local enablePartyFrames = true
@@ -19,12 +26,15 @@ local showTargetCastBar = true
 local showTargetBuffs = true
 local showTargetDebuffs = true
 local maxNumTargetBuffs = 10
-local maxNumTargetDebuffs = 11
+local maxNumTargetDebuffs = 40
+local targetDebuffSize = 20
+local targetBuffSize = 20
 local playerCastBarPos = -60
-local targetCastBarPos = -110
+local targetCastBarPos = -62
 local spellRangeAlpha = 0.6
 local partyFramesYOffset = -50
 local partyPetXOffset = 118
+local showBuffDebuffCooldowns = true
 
 --enable oUF_CombatFeedback on the following frames
 local cfs = {
@@ -68,7 +78,140 @@ oUF.colors.reaction = {
 
 oUF.colors.smooth = { 1, 0, 0, 1, 1, 0, 1, 1, 1}
 oUF.colors.runes = {{0.77, 0.12, 0.23};{0.70, 0.85, 0.20};{0.14, 0.50, 1};{.70, .21, 0.94};}
+
+----------------------
+-- Local Functions  --
+----------------------
+
+SlashCmdList['OUF_ANUBIS'] = function(s)
+	for i, frame in ipairs(oUF.objects) do
+		if frame.CastBar_Anchor then
+			if frame.CastBar_Anchor:IsMovable() then
+				frame.CastBar_Anchor:SetMovable(false)
+				frame.CastBar_Anchor:EnableMouse(false)
+				frame.CastBar_Anchor:SetBackdrop(nil)
+			else
+				frame.CastBar_Anchor:SetMovable(true)
+				frame.CastBar_Anchor:EnableMouse(true)
+				frame.CastBar_Anchor:SetBackdrop({
+						bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+				})
+				frame.CastBar_Anchor:SetBackdropColor(0.75,0,0,1)
+				frame.CastBar_Anchor:SetBackdropBorderColor(0.75,0,0,1)
+			end
+		end
+	end		
+end
+SLASH_OUF_ANUBIS1 = '/anubis'
+
+function f:SaveLayout(frame)
+	if not AnubisDB then AnubisDB = {} end
+	local opt = AnubisDB[frame] or nil;
+
+	if opt == nil then
+		AnubisDB[frame] = {
+			["point"] = "CENTER",
+			["relativePoint"] = "CENTER",
+			["PosX"] = 0,
+			["PosY"] = 0,
+		}
+		opt = AnubisDB[frame];
+	end
+
+	local f = getglobal(frame);
+	local scale = f:GetEffectiveScale();
+	opt.PosX = f:GetLeft() * scale;
+	opt.PosY = f:GetTop() * scale;
+end
+
+function f:RestoreLayout(frame)
+	if not AnubisDB then return end
 	
+	local f = getglobal(frame);
+	local opt = AnubisDB[frame] or nil;
+	if not opt then return end
+	
+	local x = opt.PosX;
+	local y = opt.PosY;
+	local s = f:GetEffectiveScale();
+
+	if not x or not y then
+		f:ClearAllPoints();
+		f:SetPoint("CENTER", UIParent, "CENTER", 0, 0);
+		return 
+	end
+
+	--calculate the scale
+	x,y = x/s,y/s;
+
+	--set the location
+	f:ClearAllPoints();
+	f:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x, y);
+end
+
+function f:CreateAnchor(name, parent, width, height)
+	local frameAnchor = CreateFrame("Frame", name, parent)
+	
+	frameAnchor:SetWidth(width)
+	frameAnchor:SetHeight(height)
+	frameAnchor:SetMovable(false)
+	frameAnchor:SetClampedToScreen(true)
+	frameAnchor:SetFrameStrata("DIALOG")
+	frameAnchor:EnableMouse(false)
+	
+	frameAnchor:SetBackdrop({
+			bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+	})
+	frameAnchor:SetBackdropColor(0.75,0,0,1)
+	frameAnchor:SetBackdropBorderColor(0.75,0,0,1)
+
+	frameAnchor:SetScript("OnMouseDown", function(frame, button)
+		if frame:IsMovable() then
+			frame.isMoving = true
+			frame:StartMoving()
+		end
+	end)
+
+	frameAnchor:SetScript("OnMouseUp", function(frame, button) 
+		if( frame.isMoving ) then
+			frame.isMoving = nil
+			frame:StopMovingOrSizing()
+			f:SaveLayout(frame:GetName())
+		end
+	end)
+
+	f:RestoreLayout(name)
+	
+	return frameAnchor
+end
+
+function f:PLAYER_LOGIN()
+	--Debuff and Buff Debug Locations
+	-- local sample_buff_icon   = [[Interface\Icons\Spell_ChargePositive]]
+	-- local sample_debuff_icon = [[Interface\Icons\Spell_ChargeNegative]]
+	-- f.oldUnitAura = _G["UnitAura"]
+	-- UnitAura = function(unit, index, filter, ...)
+		-- return GetSpellInfo(28062), "Rank 2", sample_buff_icon, 0, "Magic", 0, 0, "player", nil, 1, 28062
+	-- end
+	
+	for i, frame in ipairs(oUF.objects) do
+		if frame.SmoothBar then
+			--Smooth Update doesn't fully hook until after player login
+			SmoothUpdate(frame)
+		end
+		if frame.CastBar_Anchor then
+			f:RestoreLayout(frame.CastBar_Anchor:GetName())
+		end
+	end
+
+	self:UnregisterEvent("PLAYER_LOGIN")
+	self.PLAYER_LOGIN = nil
+end
+
+----------------------
+----------------------
+----------------------
+
 local menu = function(self)
 	--local unit = self.unit:sub(1, -2)
 	local cunit = self.unit:gsub('(.)', string.upper, 1)
@@ -145,6 +288,16 @@ local function UpdateMasterLooter(self)
 		self.MasterLooter:SetPoint('LEFT', self.Leader, 'RIGHT')
 	else
 		self.MasterLooter:SetPoint("CENTER", self, "TOPLEFT", 20, 3)
+	end
+end
+
+local function repositionTargetCastbar(self, unit)
+	if showTargetCastBar and self.visibleDebuffs then
+		local offSet = ceil(self.visibleDebuffs / floor(0.05 * playerTargetWidth)) * (targetDebuffSize + 2)
+		if self:GetParent().CastBar_Anchor and (not AnubisDB or not AnubisDB[self:GetParent().CastBar_Anchor:GetName()]) then
+			self:GetParent().CastBar_Anchor:ClearAllPoints()
+			self:GetParent().CastBar_Anchor:SetPoint('CENTER', oUF.units.target, 'CENTER', 11, targetCastBarPos + -(offSet))
+		end
 	end
 end
 
@@ -259,9 +412,7 @@ oUF.Tags["afkdnd"] = function(unit)
 end
 oUF.TagEvents["afkdnd"] = "PLAYER_FLAGS_CHANGED"
 
-local auraIcon = function(self, button, icons)
-	icons.showDebuffType = true
-	
+local auraIcon = function(Auras, button)
 	button.icon:SetTexCoord(.07, .93, .07, .93)
 	button.icon:SetPoint('TOPLEFT', button, 'TOPLEFT', 1, -1)
 	button.icon:SetPoint('BOTTOMRIGHT', button, 'BOTTOMRIGHT', -1, 1)
@@ -273,7 +424,7 @@ local auraIcon = function(self, button, icons)
 	button.cd:SetReverse()
 	button.cd:SetPoint('TOPLEFT', button, 'TOPLEFT', 2, -2) 
 	button.cd:SetPoint('BOTTOMRIGHT', button, 'BOTTOMRIGHT', -2, 2)
-	button.cd.noCooldownCount = true     
+	button.cd.noCooldownCount = showBuffDebuffCooldowns     
 end
 
 ---------------
@@ -314,7 +465,7 @@ local TotemBar = function(self, unit)
 			for i = 1, 4 do 
 				self.TotemBar[i] = CreateFrame("StatusBar", nil, self) 
 				self.TotemBar[i]:SetHeight(6) 
-				self.TotemBar[i]:SetWidth(248/4)
+				self.TotemBar[i]:SetWidth(playerTargetWidth / 4.05)
 				
 				if (i > 1) then
 					self.TotemBar[i]:SetPoint('TOPLEFT', self.TotemBar[i-1], 'TOPRIGHT', 1, 0)
@@ -352,7 +503,7 @@ local RuneBar = function(self, unit)
 
 				self.Runes[i]:SetStatusBarTexture(bartexture)
 				self.Runes[i]:SetHeight(6)
-				self.Runes[i]:SetWidth(248 / 6)
+				self.Runes[i]:SetWidth(playerTargetWidth / 6.05)
 				
 				self.Runes[i].bg = self.Runes[i]:CreateTexture(nil, "BORDER")
 				self.Runes[i].bg:SetTexture(bartexture)
@@ -369,7 +520,7 @@ local HealComm4 = function(self)
 	if IsAddOnLoaded("oUF_HealComm4") then
 		self.HealCommBar = CreateFrame('StatusBar', nil, self.Health)
 		self.HealCommBar:SetHeight(15)
-		self.HealCommBar:SetWidth(self.Health:GetWidth())
+		self.HealCommBar:SetWidth(playerTargetWidth)
 		self.HealCommBar:SetStatusBarTexture(bartexture)
 		self.HealCommBar:SetStatusBarColor(0, 0.8, 0, 0.5)
 		self.HealCommBar:SetPoint('LEFT', self.Health, 'LEFT')
@@ -407,7 +558,7 @@ local DruidBar = function(self, unit)
 		self.DruidPower:SetPoint("TOPRIGHT", self.Health, 0, 20)
 		self.DruidPower:SetStatusBarTexture(bartexture)
 		self.DruidPower:SetHeight(5)
-		self.DruidPower:SetWidth(90)
+		self.DruidPower:SetWidth(playerTargetWidth / 2.8)
 		self.DruidPower:SetAlpha(0)
 
 		self.DruidPower.bg = self.DruidPower:CreateTexture(nil, "BORDER")
@@ -442,7 +593,6 @@ end
 --Make the bar veritile instead of horizontal
 -- self.Swing:SetOrientation("VERTICAL")
 
-	
 ---------------
 ---LAYOUT
 ---------------
@@ -485,7 +635,9 @@ local function layout(self, unit)
 	self.Health.bg:SetAllPoints(self.Health)
 	self.Health.bg:SetTexture(bartexture)
 	self.Health.bg:SetAlpha(0.3)
-
+	
+	self:SetScale(setScaleVal)
+	
 	if unit ~= 'player' then
 		self.disallowVehicleSwap = true
 	end
@@ -505,8 +657,8 @@ local function layout(self, unit)
 	--player and target
 	if unit == 'player' or unit == 'target' then
 		self:SetAttribute('initial-height', 20)
-		self:SetAttribute('initial-width', 250)
-
+		self:SetAttribute('initial-width', playerTargetWidth)
+		
 		self.Power = CreateFrame('StatusBar', nil, self)
 		self.Power:SetStatusBarTexture(bartexture)
 		self.Power:SetHeight(5)
@@ -558,7 +710,7 @@ local function layout(self, unit)
 		local healthbg = self.Health:CreateTexture(nil, 'BORDER')
 		healthbg:SetPoint('CENTER', curhealth, 'CENTER', 1, 0)
 		healthbg:SetTexture(bartexture)
-		healthbg:SetWidth(254)
+		healthbg:SetWidth(playerTargetWidth + 4)
 		healthbg:SetHeight(13)
 		healthbg:SetVertexColor(0, 0, 0, 0.5)
 
@@ -568,12 +720,16 @@ local function layout(self, unit)
 		self:Tag(curpower,'[shortcurpp]')
 
 		if (unit == 'player' and showPlayerCastBar) or (unit == 'target' and showTargetCastBar) then
-			self.Castbar = CreateFrame('StatusBar', nil, self)
+			self.CastBar_Anchor = f:CreateAnchor('oUF_Anubis_Castbar_'..unit, self, (playerTargetWidth - 15), 10)
+			self.CastBar_Anchor:SetBackdrop(nil)
+			
+			self.Castbar = CreateFrame('StatusBar', nil, self.CastBar_Anchor)
 			self.Castbar:SetBackdrop({bgFile = 'Interface\ChatFrame\ChatFrameBackground', insets = {top = -3, left = -3, bottom = -3, right = -3}})
 			self.Castbar:SetBackdropColor(0, 0, 0)
-			self.Castbar:SetWidth(235)
+			self.Castbar:SetWidth(playerTargetWidth - 15)
 			self.Castbar:SetHeight(10)
 			self.Castbar:SetStatusBarTexture(bartexture)
+			self.Castbar:SetAllPoints(self.CastBar_Anchor)
 		
 			self.Castbar.bg = self.Castbar:CreateTexture(nil, 'BORDER')
 			self.Castbar.bg:SetAllPoints(self.Castbar)
@@ -627,9 +783,9 @@ local function layout(self, unit)
 	if unit == 'player' then
 		if self.Castbar and showPlayerCastBar then
 			self.Castbar:SetStatusBarColor(1, 0.50, 0)
-			self.Castbar:SetPoint('CENTER', oUF.units.player, 'CENTER', 11, playerCastBarPos)
+			self.CastBar_Anchor:SetPoint('CENTER', oUF.units.player, 'CENTER', 11, playerCastBarPos)
 		end
-		
+
 		--resting while in city
 		self.Resting = self.Health:CreateTexture(nil, "OVERLAY")
 		self.Resting:SetHeight(20)
@@ -678,7 +834,7 @@ local function layout(self, unit)
 	if unit == 'target' then
 		if showTargetCastBar then
 			self.Castbar:SetStatusBarColor(0.80, 0.01, 0)
-			self.Castbar:SetPoint('CENTER', oUF.units.target, 'CENTER', 11, targetCastBarPos)
+			self.CastBar_Anchor:SetPoint('CENTER', oUF.units.target, 'CENTER', 11, targetCastBarPos)
 		end
 		
 		--pvp icon
@@ -689,7 +845,7 @@ local function layout(self, unit)
 		
 		if showTargetBuffs then
 			self.Buffs = CreateFrame('Frame', nil, self)
-			self.Buffs.size = 20
+			self.Buffs.size = targetBuffSize
 			self.Buffs:SetHeight(self.Buffs.size)
 			self.Buffs:SetWidth(self.Buffs.size * 5)
 			self.Buffs:SetPoint('BOTTOMLEFT', self, 'TOPLEFT', -2, 5)
@@ -697,6 +853,8 @@ local function layout(self, unit)
 			self.Buffs['growth-y'] = 'TOP'
 			self.Buffs.num = maxNumTargetBuffs
 			self.Buffs.spacing = 2
+			self.Buffs.showDebuffType = false
+			self.Buffs.PostCreateIcon = auraIcon
 		end
 
 		if PlayerClass == "ROGUE" or PlayerClass == "DRUID" then
@@ -713,7 +871,7 @@ local function layout(self, unit)
 				self.CPoints[i]:SetStatusBarTexture(bartexture)
 				self.CPoints[i]:SetStatusBarColor(1, 0.8, 0)
 				self.CPoints[i]:SetHeight(6)
-				self.CPoints[i]:SetWidth(250 / MAX_COMBO_POINTS)
+				self.CPoints[i]:SetWidth(playerTargetWidth / MAX_COMBO_POINTS)
 				
 				self.CPoints[i].bg = self.CPoints[i]:CreateTexture(nil, "BORDER") 
 				self.CPoints[i].bg:SetTexture(bartexture)
@@ -728,12 +886,12 @@ local function layout(self, unit)
 			self.CPoints.unit = PlayerFrame.unit
 			self:RegisterEvent('UNIT_COMBO_POINTS', updateCombo)
 		end
-		
+
 		if showTargetDebuffs then
 			self.Debuffs = CreateFrame('Frame', nil, self)
-			self.Debuffs.size = 20
+			self.Debuffs.size = targetDebuffSize
 			self.Debuffs:SetHeight(self.Debuffs.size)
-			self.Debuffs:SetWidth(self.Debuffs.size * 12)
+			self.Debuffs:SetWidth(self.Debuffs.size * floor(0.05 * playerTargetWidth))
 			--move the debuffs if we are playing a rogue/druid
 			if self.CPoints then
 				self.Debuffs:SetPoint('TOPLEFT', self, 'BOTTOMLEFT', 0, -35)
@@ -746,6 +904,9 @@ local function layout(self, unit)
 			self.Debuffs['growth-y'] = 'DOWN'
 			self.Debuffs.num = maxNumTargetDebuffs
 			self.Debuffs.spacing = 2
+			self.Debuffs.showDebuffType = true
+			self.Debuffs.PostCreateIcon = auraIcon
+			self.Debuffs.PostUpdate = repositionTargetCastbar
 		end
 	end
 	
@@ -756,7 +917,6 @@ local function layout(self, unit)
 		unitnames:SetWidth(90)
 		unitnames:SetHeight(10)
 	end
-	self.PostCreateAuraIcon = auraIcon
 	
 	--pet
 	if unit == 'pet' then
@@ -931,11 +1091,12 @@ local function layout(self, unit)
 		self.Debuffs['growth-y'] = 'DOWN'
 		self.Debuffs.num = 15
 		self.Debuffs.spacing = 2
+		self.Debuffs.showDebuffType = true
+		self.Debuffs.PostCreateIcon = auraIcon
 		
 		self.LFDRole = self.Health:CreateTexture(nil, "OVERLAY")
 		self.LFDRole:SetHeight(16)
 		self.LFDRole:SetWidth(16)
-		--self.doh:SetPoint('RIGHT', self.Combat, 'LEFT', 0, 2)
 		self.LFDRole:SetPoint("LEFT", self, "RIGHT", 3, -2)
 		self.LFDRole:SetTexture[[Interface\LFGFrame\UI-LFG-ICON-PORTRAITROLES]]
 		self.LFDRole:SetTexCoord(20/64, 39/64, 1/64, 20/64)
@@ -953,7 +1114,8 @@ local function layout(self, unit)
 	
 	--do positional updates based on additional plugin bars
 	if unit == 'player' and showPlayerCastBar and pluginBarAdjust ~= 0 then
-		self.Castbar:SetPoint('CENTER', oUF.units.player, 'CENTER', 11, playerCastBarPos + pluginBarAdjust)
+		self.CastBar_Anchor:ClearAllPoints()
+		self.CastBar_Anchor:SetPoint('CENTER', oUF.units.player, 'CENTER', 11, playerCastBarPos + pluginBarAdjust)
 	end
 	
 end
@@ -1002,20 +1164,6 @@ if enablePartyFrames then
 			pets[i]:SetPoint('TOP', pets[i-1], 'BOTTOM', 0, partyFramesYOffset) 
 		end
 	end
-end
-
-local f = CreateFrame("frame",nil,UIParent)
-f:SetScript("OnEvent", function(self, event, ...) if self[event] then return self[event](self, event, ...) end end)
-
-function f:PLAYER_LOGIN()
-	for i, frame in ipairs(oUF.objects) do
-		if frame.SmoothBar then
-			--Smooth Update doesn't fully hook until after player login
-			SmoothUpdate(frame)
-		end
-	end
-	self:UnregisterEvent("PLAYER_LOGIN")
-	self.PLAYER_LOGIN = nil
 end
 
 if IsLoggedIn() then f:PLAYER_LOGIN() else f:RegisterEvent("PLAYER_LOGIN") end
