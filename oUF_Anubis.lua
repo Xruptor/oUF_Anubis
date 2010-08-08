@@ -14,7 +14,7 @@ local pluginBarAdjust = 0 --don't touch
 --If you are compelled to edit these settings, then do so at your own risk.  I WILL NOT PROVIDE ASSISTANCE!!!
 local setScaleVal = 1
 local playerTargetWidth = 220
-local enableShortName = false
+local enableShortName = true
 local shortNameLength = 15
 local enablePartyFrames = true
 local enablePartyPets = true
