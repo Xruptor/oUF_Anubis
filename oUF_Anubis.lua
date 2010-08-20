@@ -460,134 +460,6 @@ end
 --Make the bar veritile instead of horizontal
 -- self.Swing:SetOrientation("VERTICAL")
 
-----------------------
--- Local Functions  --
-----------------------
-
-SlashCmdList['OUF_ANUBIS'] = function(s)
-	for i, frame in ipairs(oUF.objects) do
-		if frame.CastBar_Anchor then
-			if frame.CastBar_Anchor:IsMovable() then
-				frame.CastBar_Anchor:SetMovable(false)
-				frame.CastBar_Anchor:EnableMouse(false)
-				frame.CastBar_Anchor:SetBackdrop(nil)
-			else
-				frame.CastBar_Anchor:SetMovable(true)
-				frame.CastBar_Anchor:EnableMouse(true)
-				frame.CastBar_Anchor:SetBackdrop({
-						bgFile = "Interface/Tooltips/UI-Tooltip-Background",
-				})
-				frame.CastBar_Anchor:SetBackdropColor(0.75,0,0,1)
-				frame.CastBar_Anchor:SetBackdropBorderColor(0.75,0,0,1)
-			end
-		end
-	end		
-end
-SLASH_OUF_ANUBIS1 = '/anubis'
-
-function f:SaveLayout(frame)
-	if not AnubisDB then AnubisDB = {} end
-	local opt = AnubisDB[frame] or nil;
-
-	if opt == nil then
-		AnubisDB[frame] = {
-			["point"] = "CENTER",
-			["relativePoint"] = "CENTER",
-			["PosX"] = 0,
-			["PosY"] = 0,
-		}
-		opt = AnubisDB[frame];
-	end
-
-	local f = getglobal(frame);
-	local scale = f:GetEffectiveScale();
-	opt.PosX = f:GetLeft() * scale;
-	opt.PosY = f:GetTop() * scale;
-end
-
-function f:RestoreLayout(frame)
-	if not AnubisDB then return end
-	
-	local f = getglobal(frame);
-	local opt = AnubisDB[frame] or nil;
-	if not opt then return end
-	
-	local x = opt.PosX;
-	local y = opt.PosY;
-	local s = f:GetEffectiveScale();
-
-	if not x or not y then
-		f:ClearAllPoints();
-		f:SetPoint("CENTER", UIParent, "CENTER", 0, 0);
-		return 
-	end
-
-	--calculate the scale
-	x,y = x/s,y/s;
-
-	--set the location
-	f:ClearAllPoints();
-	f:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x, y);
-end
-
-function f:CreateAnchor(name, parent, width, height)
-	local frameAnchor = CreateFrame("Frame", name, parent)
-	
-	frameAnchor:SetWidth(width)
-	frameAnchor:SetHeight(height)
-	frameAnchor:SetMovable(false)
-	frameAnchor:SetClampedToScreen(true)
-	frameAnchor:SetFrameStrata("DIALOG")
-	frameAnchor:EnableMouse(false)
-	
-	frameAnchor:SetBackdrop({
-			bgFile = "Interface/Tooltips/UI-Tooltip-Background",
-	})
-	frameAnchor:SetBackdropColor(0.75,0,0,1)
-	frameAnchor:SetBackdropBorderColor(0.75,0,0,1)
-
-	frameAnchor:SetScript("OnMouseDown", function(frame, button)
-		if frame:IsMovable() then
-			frame.isMoving = true
-			frame:StartMoving()
-		end
-	end)
-
-	frameAnchor:SetScript("OnMouseUp", function(frame, button) 
-		if( frame.isMoving ) then
-			frame.isMoving = nil
-			frame:StopMovingOrSizing()
-			f:SaveLayout(frame:GetName())
-		end
-	end)
-
-	f:RestoreLayout(name)
-	
-	return frameAnchor
-end
-
-function f:PLAYER_LOGIN()
-	--Debuff and Buff Debug Locations
-	-- local sample_buff_icon   = [[Interface\Icons\Spell_ChargePositive]]
-	-- local sample_debuff_icon = [[Interface\Icons\Spell_ChargeNegative]]
-	-- f.oldUnitAura = _G["UnitAura"]
-	-- UnitAura = function(unit, index, filter, ...)
-		-- return GetSpellInfo(28062), "Rank 2", sample_buff_icon, 0, "Magic", 0, 0, "player", nil, 1, 28062
-	-- end
-	
-	for i, frame in ipairs(oUF.objects) do
-		if frame.SmoothBar then
-			--Smooth Update doesn't fully hook until after player login
-			SmoothUpdate(frame)
-		end
-		if frame.CastBar_Anchor then
-			f:RestoreLayout(frame.CastBar_Anchor:GetName())
-		end
-	end
-
-	self:UnregisterEvent("PLAYER_LOGIN")
-	self.PLAYER_LOGIN = nil
-end
 
 ---------------
 ---LAYOUT
@@ -1116,6 +988,10 @@ local function layout(self, unit)
 	
 end
 
+----------------------
+-- 	  Load Style	--
+----------------------
+
 oUF:RegisterStyle('oUF_Anubis', layout)
 oUF:SetActiveStyle('oUF_Anubis')
 
@@ -1162,4 +1038,134 @@ if enablePartyFrames then
 	end
 end
 
+----------------------
+-- Local Functions  --
+----------------------
+
+SlashCmdList['OUF_ANUBIS'] = function(s)
+	for i, frame in ipairs(oUF.objects) do
+		if frame.CastBar_Anchor then
+			if frame.CastBar_Anchor:IsMovable() then
+				frame.CastBar_Anchor:SetMovable(false)
+				frame.CastBar_Anchor:EnableMouse(false)
+				frame.CastBar_Anchor:SetBackdrop(nil)
+			else
+				frame.CastBar_Anchor:SetMovable(true)
+				frame.CastBar_Anchor:EnableMouse(true)
+				frame.CastBar_Anchor:SetBackdrop({
+						bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+				})
+				frame.CastBar_Anchor:SetBackdropColor(0.75,0,0,1)
+				frame.CastBar_Anchor:SetBackdropBorderColor(0.75,0,0,1)
+			end
+		end
+	end		
+end
+SLASH_OUF_ANUBIS1 = '/anubis'
+
+function f:SaveLayout(frame)
+	if not AnubisDB then AnubisDB = {} end
+	local opt = AnubisDB[frame] or nil;
+
+	if opt == nil then
+		AnubisDB[frame] = {
+			["point"] = "CENTER",
+			["relativePoint"] = "CENTER",
+			["PosX"] = 0,
+			["PosY"] = 0,
+		}
+		opt = AnubisDB[frame];
+	end
+
+	local f = getglobal(frame);
+	local scale = f:GetEffectiveScale();
+	opt.PosX = f:GetLeft() * scale;
+	opt.PosY = f:GetTop() * scale;
+end
+
+function f:RestoreLayout(frame)
+	if not AnubisDB then return end
+	
+	local f = getglobal(frame);
+	local opt = AnubisDB[frame] or nil;
+	if not opt then return end
+	
+	local x = opt.PosX;
+	local y = opt.PosY;
+	local s = f:GetEffectiveScale();
+
+	if not x or not y then
+		f:ClearAllPoints();
+		f:SetPoint("CENTER", UIParent, "CENTER", 0, 0);
+		return 
+	end
+
+	--calculate the scale
+	x,y = x/s,y/s;
+
+	--set the location
+	f:ClearAllPoints();
+	f:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x, y);
+end
+
+function f:CreateAnchor(name, parent, width, height)
+	local frameAnchor = CreateFrame("Frame", name, parent)
+	
+	frameAnchor:SetWidth(width)
+	frameAnchor:SetHeight(height)
+	frameAnchor:SetMovable(false)
+	frameAnchor:SetClampedToScreen(true)
+	frameAnchor:SetFrameStrata("DIALOG")
+	frameAnchor:EnableMouse(false)
+	
+	frameAnchor:SetBackdrop({
+			bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+	})
+	frameAnchor:SetBackdropColor(0.75,0,0,1)
+	frameAnchor:SetBackdropBorderColor(0.75,0,0,1)
+
+	frameAnchor:SetScript("OnMouseDown", function(frame, button)
+		if frame:IsMovable() then
+			frame.isMoving = true
+			frame:StartMoving()
+		end
+	end)
+
+	frameAnchor:SetScript("OnMouseUp", function(frame, button) 
+		if( frame.isMoving ) then
+			frame.isMoving = nil
+			frame:StopMovingOrSizing()
+			f:SaveLayout(frame:GetName())
+		end
+	end)
+
+	f:RestoreLayout(name)
+	
+	return frameAnchor
+end
+
+function f:PLAYER_LOGIN()
+	--Debuff and Buff Debug Locations
+	-- local sample_buff_icon   = [[Interface\Icons\Spell_ChargePositive]]
+	-- local sample_debuff_icon = [[Interface\Icons\Spell_ChargeNegative]]
+	-- f.oldUnitAura = _G["UnitAura"]
+	-- UnitAura = function(unit, index, filter, ...)
+		-- return GetSpellInfo(28062), "Rank 2", sample_buff_icon, 0, "Magic", 0, 0, "player", nil, 1, 28062
+	-- end
+	
+	for i, frame in ipairs(oUF.objects) do
+		if frame.SmoothBar then
+			--Smooth Update doesn't fully hook until after player login
+			SmoothUpdate(frame)
+		end
+		if frame.CastBar_Anchor then
+			f:RestoreLayout(frame.CastBar_Anchor:GetName())
+		end
+	end
+
+	self:UnregisterEvent("PLAYER_LOGIN")
+	self.PLAYER_LOGIN = nil
+end
+
 if IsLoggedIn() then f:PLAYER_LOGIN() else f:RegisterEvent("PLAYER_LOGIN") end
+
